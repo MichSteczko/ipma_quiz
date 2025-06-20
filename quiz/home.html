@@ -1,0 +1,2172 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Quiz App</title>
+        <style>
+                body {
+                        font-family: Arial, sans-serif;
+                        max-width: 700px;
+                        margin: 20px auto;
+                        padding: 10px;
+                }
+
+                .question {
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                }
+
+                .answers {
+                        list-style-type: none;
+                        padding: 0;
+                }
+
+                .answers li {
+                        margin-bottom: 8px;
+                }
+
+                .answers label {
+                        display: block;
+                        padding: 8px 16px;
+                        border-radius: 6px;
+                        transition: background 0.2s;
+                        cursor: pointer;
+                        border: 1px solid transparent;
+                }
+
+                .answers input[type="radio"] {
+                        margin-right: 8px;
+                        vertical-align: middle;
+                }
+
+                .answers li.selected label {
+                        background: #e0f7fa;
+                        border-color: #00bcd4;
+                }
+
+                button {
+                        padding: 8px 16px;
+                        font-size: 16px;
+                        margin-top: 10px;
+                }
+
+                .score {
+                        font-size: 20px;
+                        font-weight: bold;
+                        margin-top: 20px;
+                }
+
+                .summary-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 20px;
+                        margin-bottom: 20px;
+                }
+
+                .summary-table th,
+                .summary-table td {
+                        border: 1px solid #ccc;
+                        padding: 8px;
+                        vertical-align: top;
+                        text-align: left;
+                }
+
+                .summary-table th {
+                        background: #f5f5f5;
+                }
+
+                .user-correct {
+                        background: #c8e6c9;
+                        color: #256029;
+                        font-weight: bold;
+                }
+
+                .user-wrong {
+                        background: #ffcdd2;
+                        color: #b71c1c;
+                        font-weight: bold;
+                }
+
+                .correct-answer {
+                        background: #fff9c4;
+                        color: #827717;
+                }
+
+                #setup-panel {
+                        margin-bottom: 30px;
+                        padding: 16px;
+                        border: 1px solid #ddd;
+                        border-radius: 8px;
+                        background: #f9f9f9;
+                }
+
+                #setup-panel label {
+                        font-weight: bold;
+                        margin-right: 8px;
+                }
+
+                #setup-panel select,
+                #setup-panel input[type="number"] {
+                        margin-right: 16px;
+                }
+        </style>
+</head>
+
+<body>
+        <div id="setup-panel">
+                <label for="category-select">Kategoria:</label>
+                <select id="category-select"></select>
+                <label for="range-from">Pytania od:</label>
+                <input type="number" id="range-from" min="1" value="1" style="width:60px;" />
+                <label for="range-to">do:</label>
+                <input type="number" id="range-to" min="1" value="1" style="width:60px;" />
+                <button id="start-btn">Rozpocznij quiz</button>
+        </div>
+        <div id="quiz-container" style="display:none;">
+                <div id="question" class="question"></div>
+                <ul id="answers" class="answers"></ul>
+                <button id="next-btn" disabled>Następne pytanie</button>
+                <div id="score" class="score" style="display:none;"></div>
+                <div id="summary" style="display:none;"></div>
+        </div>
+        <script>
+                // Przykładowy JSON z pytaniami i kategoriami
+                const quizData = [
+                        {
+                                "question": "Co znacząco przyczynia się do gotowości interesariuszy do poparcia i współpracy w ramach projektu?",
+                                "correct_answer": "Równorzędne traktowanie kryteriów formalnych i nieformalnych.",
+                                "questions": [
+                                        "Równorzędne traktowanie kryteriów formalnych i nieformalnych.",
+                                        "Maksymalizacja zysków z projektu.",
+                                        "Wyłącznie formalne kryteria sukcesu.",
+                                        "Rozbudowany system komunikacyjny w projekcie."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co jest celem Definiowania projektu?",
+                                "correct_answer": "Stworzenie, wdrożenie oraz utrzymanie takiego podejścia w projekcie, które będzie najlepiej służyć celom organizacyjnym",
+                                "questions": [
+                                        "Stworzenie, wdrożenie oraz utrzymanie takiego podejścia w projekcie, które będzie najlepiej służyć celom organizacyjnym",
+                                        "Stworzenie, wdrożenie oraz utrzymanie podejścia, które służy tylko celom projektowym.",
+                                        "Ustalenie, które zasoby organizacji powinny być użyte w projekcie.",
+                                        "Zdecydowanie, które zadania powinny być wykonane w pierwszej kolejności w projekcie."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Który z wymienionych poniżej skrótów (haseł) nie oznacza formuły realizacyjnej projektu?",
+                                "correct_answer": "RACI",
+                                "questions": [
+                                        "pod klucz",
+                                        "PPP",
+                                        "BOT",
+                                        "RACI"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Kto opracowuje formułę realizacji projektu do dalszego uzgodnienia i akceptacji?",
+                                "correct_answer": "Kierownik Projektu w procesie przygotowania projektu.",
+                                "questions": [
+                                        "Zespół Projektowy ma zadanie opracowania formuły realizacji do zatwierdzenia przez Kierownika Projektu.",
+                                        "Komitet Sterujący w procesie zatwierdzania projektu przez Sponsora.",
+                                        "Kierownik Projektu w procesie przygotowania projektu.",
+                                        "Sponsor Projektu przygotowuje formułę realizacji, uzgadnia i inicjuje projekt."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie role pełnią kryteria sukcesu w projekcie?",
+                                "correct_answer": "Kryteria sukcesu służą interesariuszom do pomiaru i oceny sukcesu projektu, mają wpływ na interakcję z szerszym kontekstem i odgrywają kluczową rolę w zdefiniowaniu podejścia do jego planowania.",
+                                "questions": [
+                                        "Kryteria sukcesu służą interesariuszom do pomiaru i oceny sukcesu projektu, mają wpływ na interakcję z szerszym kontekstem i odgrywają kluczową rolę w zdefiniowaniu podejścia do jego planowania.",
+                                        "Kryteria sukcesu służą tylko do formalnej oceny projektu.",
+                                        "Kryteria sukcesu są ważne tylko pod kątem osiągnięcia określonej jak najwyższej jakości produktu końcowego.",
+                                        "Kryteria sukcesu są ważne jedynie na początku projektu, aby określić jego cele."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co jest ważnym elementem procesu Definiowania projektu?",
+                                "correct_answer": "Przestrzeganie norm, standardów, zgodność z regulacjami i normami kulturowymi oraz uznawanymi wartościami.",
+                                "questions": [
+                                        "Przestrzeganie norm, standardów, zgodność z regulacjami i normami kulturowymi oraz uznawanymi wartościami.",
+                                        "Organizowanie co tygodniowych spotkań zespołu projektowego, aby utrzymać wysoką dynamikę pracy.",
+                                        "Negocjacje z dostawcami w celu uzyskania jak najkorzystniejszych warunków umowy.",
+                                        "Ciągłe modyfikacje planu projektu w odpowiedzi na zmiany w teamie projektu."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Kierownik projektu w trakcie jego trwania, znając zakres prac objęty kontraktem z klientem:",
+                                "correct_answer": "w sposób ciągły rozpoznaje i analizuje potrzeby interesariuszy i w uzgodnieniu ze sponsorem, zgodnie z zapisami Umowy weryfikuje deklarację wymagań, zakres, budżet i harmonogram projektu",
+                                "questions": [
+                                        "dokładnie realizuje zapisy kontraktu, uwzględniając na liście ryzyka wszystkie wymagania klienta z tym związane",
+                                        "płynnie zarządza nowymi roszczeniami i potrzebami interesariuszy w projekcie planując je uwzględnić przy kolejnym projekcie",
+                                        "w sposób ciągły rozpoznaje i analizuje potrzeby interesariuszy i w uzgodnieniu ze sponsorem, zgodnie z zapisami Umowy weryfikuje deklarację wymagań, zakres, budżet i harmonogram projektu",
+                                        "prezentuje raport końcowy projektu wraz z listą niezgodności (z ang. NCL – Non Compliance List) w zakresie zmiany roszczeń i potrzeb wszystkim interesariuszom"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie elementy oddziałują na hierarchię celów projektu?",
+                                "correct_answer": "Czynniki kontekstowe i konkretne potrzeby i wymagania interesariusza.",
+                                "questions": [
+                                        "Ograniczenia narzucone przez akceptowalne ryzyko, uzgodnionego czasu i budżetu.",
+                                        "Cel nadrzędny i cel roboczy projektu.",
+                                        "Cele robocze projektu i potencjalne skutki uboczne.",
+                                        "Czynniki kontekstowe i konkretne potrzeby i wymagania interesariusza."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Kto ponosi odpowiedzialność za to, aby cele projektu były zgodne z misją i wizją organizacji?",
+                                "correct_answer": "Właściciel biznesowy (sponsor) projektu",
+                                "questions": [
+                                        "Odbiorca produktu projektu",
+                                        "Zarząd organizacji",
+                                        "Kierownik projektu",
+                                        "Właściciel biznesowy (sponsor) projektu"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co jest nadrzędnym przesłaniem zawierającym uzasadnienie biznesowe i ogólny kontekst dla celów projektu?",
+                                "correct_answer": "Uzasadnienie biznesowe.",
+                                "questions": [
+                                        "Zadania projektu.",
+                                        "Cele organizacyjne.",
+                                        "Uzasadnienie biznesowe.",
+                                        "Cele robocze projektu."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co jest kluczowe w procesie definiowania korzyści, jakie projekt przyniesie każdej ze stron?",
+                                "correct_answer": "Komunikacja, negocjacje oraz umiejętności analityczne",
+                                "questions": [
+                                        "Tylko bezpośrednie, indywidualne rozmowy z interesariuszami",
+                                        "Tylko definicje celów projektu",
+                                        "Tylko wiedza techniczna niezbędna do realizacji projektu",
+                                        "Komunikacja, negocjacje oraz umiejętności analityczne"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakiej funkcjonuje proces określania korzyści projektu?",
+                                "correct_answer": "Proces ten przebiega iteracyjnie i powinien być regularnie przeprowadzany w poszczególnych etapach projektu",
+                                "questions": [
+                                        "Proces ten jest przeprowadzany tylko po zakończeniu projektu",
+                                        "Proces ten przebiega iteracyjnie i powinien być regularnie przeprowadzany w poszczególnych etapach projektu",
+                                        "Proces ten jest jednorazowy i przeprowadza się go na początku projektu",
+                                        "Proces ten jest przeprowadzany tylko na etapie planowania projektu"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co oznacza strukturyzowanie (nadanie struktury) zakresu projektu?",
+                                "correct_answer": "Podział projektu na podzadania i pakiety pracy",
+                                "questions": [
+                                        "Zdefiniowanie celów projektu",
+                                        "Podział projektu na podzadania i pakiety pracy",
+                                        "Przydzielenie zasobów do projektu",
+                                        "Planowanie ryzyka w projekcie"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie działania są podejmowane w celu utrzymywania trwałości zakresu projektu?",
+                                "correct_answer": "Nieustanne monitorowanie i kontrola potrzeb, żądań i oczekiwań (kluczowych) interesariuszy.",
+                                "questions": [
+                                        "Tworzenie struktury podziału pracy.",
+                                        "Definiowanie granic projekcie przez zaangażowanie wszystkich członków zespołu.",
+                                        "Pogłębiane zrozumienie sedna projektu.",
+                                        "Nieustanne monitorowanie i kontrola potrzeb, żądań i oczekiwań (kluczowych) interesariuszy."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co to są produkty cząstkowe projektu?",
+                                "correct_answer": "Są to materialne lub niematerialne aktywa projektu",
+                                "questions": [
+                                        "Są to materialne lub niematerialne aktywa projektu",
+                                        "Są to tylko materialne rezultaty projektu",
+                                        "Są to aktywa projektu, które nie są mierzalne",
+                                        "Są to wyłącznie usługi oferowane przez projekt"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Zarządzanie konfiguracją zakresu podczas zarządzania projektem ma na celu:",
+                                "correct_answer": "zapewnienie zgodności zakresu z uzgodnionymi potrzebami i wymaganiami interesariuszy i utrzymanie stałej kontroli nad zmianami",
+                                "questions": [
+                                        "zmianę obowiązków członków zespołu projektowego",
+                                        "zapewnienie zgodności zakresu z uzgodnionymi potrzebami i wymaganiami interesariuszy i utrzymanie stałej kontroli nad zmianami",
+                                        "dopuszczanie przeszkód utrudniających osiągnięcie celów projektu",
+                                        "komunikację z interesariuszami w różnych konfiguracjach zespołowych."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Produkt cząstkowy projektu to:",
+                                "correct_answer": "materialny lub niematerialny mierzalny rezultat projektu, który przyczynia się do realizacji oczekiwanych przez klienta rezultatów i korzyści",
+                                "questions": [
+                                        "efekt rozliczenia każdego z etapów projektu",
+                                        "jeden z wyznaczonych kamieni milowych, który chcemy osiągnąć w projekcie",
+                                        "materialny lub niematerialny mierzalny rezultat projektu, który przyczynia się do realizacji oczekiwanych przez klienta rezultatów i korzyści",
+                                        "jeden z kilku założonych w projekcie celów produktowych"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co obejmuje zarządzanie zakresem projektu?",
+                                "correct_answer": "Definicję produktów cząstkowych, tworzenie struktury definiującej zakres (WBS) i definiowanie pakietów prac",
+                                "questions": [
+                                        "Definicję produktów cząstkowych, tworzenie struktury definiującej zakres (WBS) i definiowanie pakietów prac",
+                                        "Monitorowanie ryzyka niezamierzonej zmiany granic zakresu",
+                                        "Ustalanie celów strategii organizacji",
+                                        "Definicję rezultatów, wyników i korzyści projektu"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co jest konieczne do określenia nakładu pracy i czasu trwania każdego zadania?",
+                                "correct_answer": "Określenie dostępnych zasobów materialnych oraz osobowych, jak również kompetencji z nimi związanych",
+                                "questions": [
+                                        "Określenie dostępnych zasobów osobowych",
+                                        "Określenie dostępnych zasobów materialnych oraz kompetencji z nimi związanych",
+                                        "Określenie dostępnych zasobów materialnych oraz osobowych, jak również kompetencji z nimi związanych",
+                                        "Określenie dostępnych zasobów materialnych"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "„Fast-tracking” to jedna z technik skracania harmonogramu projektu i polega na:",
+                                "correct_answer": "zwiększeniu ilości zadań realizowanych równolegle celem skrócenia czasu realizacji całego projektu.",
+                                "questions": [
+                                        "skróceniu czasu trwania wszystkich zadań o 50% z uwagi na założenia, że najczęściej szacujemy te czasy zbyt optymistycznie.",
+                                        "zwiększeniu ilości zadań realizowanych równolegle celem skrócenia czasu realizacji całego projektu.",
+                                        "zmianie czasu trwania zadań tak, aby skończyć projekt w zadanym terminie.",
+                                        "zwiększeniu liczby zasobów przydzielonych do realizacji danego zadania celem skrócenia jego czasu trwania."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jak standard kierownik projektu radzi sobie z odchyleniami w realizacji harmonogramu?",
+                                "correct_answer": "Porównuje obecny harmonogram z planem bazowym i dokonuje korekt",
+                                "questions": [
+                                        "Porównuje obecny harmonogram z planem bazowym i dokonuje korekt",
+                                        "Przeprowadza szkolenia z zarządzania czasem dla zespołu projektowego",
+                                        "Ignoruje je i kontynuuje z pierwotnym harmonogramem",
+                                        "Wymienia zespół projektowy na bardziej doświadczony"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "W jakim celu wyznacza się w projekcie ścieżkę krytyczną?",
+                                "correct_answer": "Ścieżka krytyczna jest ważnym elementem zarządzania czasem w projekcie, który pozwala zidentyfikować taki łańcuch czynności, w którym zapas czasu jest równy zero.",
+                                "questions": [
+                                        "Ścieżka krytyczna jest wyznaczana przez zbiór czynności, których wykonanie jest najtrudniejsze w projekcie.",
+                                        "Ścieżkę krytyczną wyznacza się w celu ustalenia najdłuższego możliwego czasu wykonania projektu, który może być zaakceptowany przez sponsora projektu.",
+                                        "Ścieżka krytyczna jest zbiorem czynności, bez których nie da się zrealizować projektu na zadawalającym poziomie jakości.",
+                                        "Ścieżka krytyczna jest ważnym elementem zarządzania czasem w projekcie, który pozwala zidentyfikować taki łańcuch czynności, w którym zapas czasu jest równy zero."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co jest głównym celem harmonogramowania?",
+                                "correct_answer": "Jak najbardziej wydajna realizacja przedsięwzięcia",
+                                "questions": [
+                                        "Zidentyfikowanie wszystkich potencjalnych problemów projektowych",
+                                        "Powiadomienie wszystkich zainteresowanych stron o planach",
+                                        "Oszacowanie liczby osób potrzebnych do realizacji projektu",
+                                        "Jak najbardziej wydajna realizacja przedsięwzięcia"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co jest niezbędne do znalezienia równowagi pomiędzy jakością, kosztem i czasem realizacji projektu?",
+                                "correct_answer": "Zdefiniowanie kryteriów sukcesu i wymagań projektu",
+                                "questions": [
+                                        "Znalezienie odpowiedniego zasobu materialnego",
+                                        "Zdefiniowanie kryteriów sukcesu i wymagań projektu",
+                                        "Określenie nakładu pracy",
+                                        "Określenie dostępności zasobów osobowych"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co powinno gwarantować skuteczne działanie wszelkich poziomów zarządzania projektem?",
+                                "correct_answer": "Każdy z poziomów powinien pracować w oparciu o właściwe, dostarczane na czas, rzetelne informacje wysokiej jakości.",
+                                "questions": [
+                                        "Każdy z poziomów powinien pracować w oparciu o indywidualne doświadczenia i umiejętności członków zespołu.",
+                                        "Każdy z poziomów powinien pracować w oparciu o kierunki wyznaczone przez sponsora projektu.",
+                                        "Każdy z poziomów powinien pracować w oparciu o standardy projektowe i zasady zarządzania ryzykiem.",
+                                        "Każdy z poziomów powinien pracować w oparciu o właściwe, dostarczane na czas, rzetelne informacje wysokiej jakości."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Na czym polega podstawowa rola sponsora projektu?",
+                                "correct_answer": "Sponsor projektu odpowiada za strategiczne elementy projektu oraz prawidłowe zdefiniowanie celu i zakresu projektu.",
+                                "questions": [
+                                        "Sponsor projektu odpowiada za strategiczne elementy projektu oraz prawidłowe zdefiniowanie celu i zakresu projektu.",
+                                        "Sponsor projektu jest głównym udziałowcem przyszłego aktywa, które powstanie po zakończeniu projektu.",
+                                        "Sponsor projektu odpowiada przede wszystkim za organizację finansowania zewnętrznego projektu, niezbędnego dla utrzymania płynności finansowej.",
+                                        "Sponsor projektu odpowiada za terminowe płatności z tytułu realizacji projektu."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Kto jest zazwyczaj odpowiedzialny za zdefiniowanie celu i zakresu projektu?",
+                                "correct_answer": "Sponsor projektu",
+                                "questions": [
+                                        "Wszystkie poziomy zarządzania projektem",
+                                        "Kierownik projektu",
+                                        "Lider zespołu",
+                                        "Sponsor projektu"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Określenie potrzeb związanych z komunikacją w projekcie dotyczy:",
+                                "correct_answer": "interesariuszy projektu",
+                                "questions": [
+                                        "sponsora projektu",
+                                        "interesariuszy projektu",
+                                        "kierownika projektu i członków zespołu projektowego",
+                                        "Product Ownera"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie czynniki mogą wpływać na formę struktury organizacyjnej w projekcie?",
+                                "correct_answer": "Wszystkie powyższe oraz lokalizacja geograficzna uczestnika i wymagane kompetencje.",
+                                "questions": [
+                                        "Wyłącznie strategia i struktury biznesowe.",
+                                        "Kultura firmy i moc decyzyjna.",
+                                        "Tylko zastosowane technologie i przewidywane rozwiązania.",
+                                        "Wszystkie powyższe oraz lokalizacja geograficzna uczestnika i wymagane kompetencje."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co jest kluczowym czynnikiem wpływającym na potrzebę dokonywania zmian lub mniejszych poprawek w organizacji tymczasowej?",
+                                "correct_answer": "Stałe monitorowanie środowiska projektu",
+                                "questions": [
+                                        "Zmiana projektu",
+                                        "Zmiany w czynnikach wynikających z kontekstu",
+                                        "Stałe monitorowanie środowiska projektu",
+                                        "Kończenie projektu"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Podczas układania asfaltu w realizowanym projekcie inwestycyjnym, który prowadzisz stwierdzasz, że 30% tego asfaltu nie spełnia standardu jakości, który obowiązuje w Twojej firmie. Jesteś przekonany, że ten asfalt będzie spełniał w tym przypadku kryteria budowlane i nie uważasz, że musi spełniać specyficzne wysokie kryteria jakości Twojej organizacji. Co powinieneś zrobić?",
+                                "correct_answer": "Raportujesz niższy poziom jakości asfaltu w określonych odcinkach i próbujesz znaleźć rozwiązanie problemu.",
+                                "questions": [
+                                        "Piszesz w raporcie, że „asfalt spełnia nasze kryteria jakości”.",
+                                        "Zmieniasz standard jakości, w celu dopasowania go do poziomu jakości projektu.",
+                                        "Starasz się, żeby następne dostawy asfaltu były zgodne ze standardem obowiązującym w firmie.",
+                                        "Raportujesz niższy poziom jakości asfaltu w określonych odcinkach i próbujesz znaleźć rozwiązanie problemu."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co oznacza 'jakość' w kontekście zarządzania projektem, zgodnie z modelem kompetencji IPMA ICB 4.0?",
+                                "correct_answer": "Jakość oznacza zarówno sposób organizowania projektu, jak i zarządzania i kontrolowania jakości produktów i rezultatów projektu",
+                                "questions": [
+                                        "Jakość odnosi się tylko do produktów i rezultatów projektu.",
+                                        "Jakość to standardy utrzymania jakości w podprojektach i zadaniach.",
+                                        "Jakość oznacza wyłącznie sposób prowadzenia i organizowania projektu.",
+                                        "Jakość oznacza zarówno sposób organizowania projektu, jak i zarządzania i kontrolowania jakości produktów i rezultatów projektu"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "W jakim celu przeprowadza się weryfikację jakości w projekcie?",
+                                "correct_answer": "Weryfikację przeprowadza się w celu określenia, czy dotrzymuje się jakości produktów, czy identyfikowane są wady i odstępstwa wykorzystując ustanowione narzędzia, procedury i techniki.",
+                                "questions": [
+                                        "Weryfikacja jest przeprowadzana w celu przekazania żądań zmiany stałej organizacji projektu.",
+                                        "Weryfikację przeprowadza się tylko na początku projektu, aby uniknąć kosztów.",
+                                        "Weryfikacja jest przeprowadzana tylko wtedy, gdy projekt już się zakończył.",
+                                        "Weryfikację przeprowadza się w celu określenia, czy dotrzymuje się jakości produktów, czy identyfikowane są wady i odstępstwa wykorzystując ustanowione narzędzia, procedury i techniki."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co jest celem zarządzania jakością w projekcie?",
+                                "correct_answer": "Przegląd projektu i jego projektów cząstkowych w systematycznym procesie",
+                                "questions": [
+                                        "Wymuszanie akceptacji celów jakościowych przez członków organizacji tymczasowej",
+                                        "Osiągnięcie wymiernych wskaźników świadczących o wykonaniu planu jakości",
+                                        "Organizacja audytów jakości tylko przez osoby zewnętrzne",
+                                        "Przegląd projektu i jego projektów cząstkowych w systematycznym procesie"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co jest celem zapewnienia jakości w projekcie?",
+                                "correct_answer": "Spełnienie wymogów i standardów jakościowych, mających zastosowanie w projekcie i produktach cząstkowych projektu.",
+                                "questions": [
+                                        "Uzyskanie produktów projektu najwyższej jakości po najniższych kosztach.",
+                                        "Ustalenie, jaki będzie koszt projektu, aby jakość produktów projektu była najwyższa.",
+                                        "Uzyskanie produktów projektu o wymaganej jakości w najkrótszym możliwym czasie.",
+                                        "Spełnienie wymogów i standardów jakościowych, mających zastosowanie w projekcie i produktach cząstkowych projektu."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co jest wymagane dla odpowiedniego wdrażania procesów zapewnienia jakości w projekcie?",
+                                "correct_answer": "Ustanowienie standardu i pomiar jego skuteczności.",
+                                "questions": [
+                                        "Ustalenie maksymalnego budżetu przeznaczonego na projekt.",
+                                        "Wybór najtańszych dostępnych materiałów.",
+                                        "Ustalenie ilości pracowników potrzebnych do wykonania projektu.",
+                                        "Ustanowienie standardu i pomiar jego skuteczności."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Która z poniższych wypowiedzi najlepiej opisuje zastosowanie Metody Wartości Wypracowanej (Earned Value) w zarządzaniu finansami projektu?",
+                                "correct_answer": "Metoda Wartości Wypracowanej (Earned Value) jest używana do monitorowania i kontrolowania wydatków projektu.",
+                                "questions": [
+                                        "Metoda Wartości Wypracowanej (Earned Value) jest używana do finansowania zewnętrznego projektu.",
+                                        "Metoda Wartości Wypracowanej (Earned Value) jest używana do optymalizacji kosztów projektowania.",
+                                        "Metoda Wartości Wypracowanej (Earned Value) jest używana do szacowania kosztów projektu.",
+                                        "Metoda Wartości Wypracowanej (Earned Value) jest używana do monitorowania i kontrolowania wydatków projektu."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Kiedy jednostka szacuje koszty projektu, jakie koszty powinna brać pod uwagę zgodnie ze standardem IPMA ICB 4.0?",
+                                "correct_answer": "Zarówno bezpośrednie koszty, takie jak czas pracy, materiały, amortyzacja, jak i koszty pośrednie, takie jak np. koszty utrzymania budynku biurowego, opłaty stałe lub licencje na oprogramowanie biurowe.",
+                                "questions": [
+                                        "Żadne z powyższych.",
+                                        "Tylko koszty pośrednie, takie jak np. koszty utrzymania budynku biurowego, opłaty stałe lub licencje na oprogramowanie biurowe.",
+                                        "Tylko bezpośrednie koszty, takie jak czas pracy, materiały i amortyzacja.",
+                                        "Zarówno bezpośrednie koszty, takie jak czas pracy, materiały, amortyzacja, jak i koszty pośrednie, takie jak np. koszty utrzymania budynku biurowego, opłaty stałe lub licencje na oprogramowanie biurowe."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co umożliwia analiza przepływów pieniężnych (cash-flow) w projekcie?",
+                                "correct_answer": "Analiza przepływów pieniężnych pozwoli sprawdzić, czy wewnętrzne finansowanie w organizacji zapewnia potrzebne środki finansowe w każdym momencie projektu",
+                                "questions": [
+                                        "Analiza przepływów pieniężnych pozwoli utworzyć rezerwę zarządczą w odpowiedniej wysokości.",
+                                        "Analiza przepływów pieniężnych pozwoli nawiązać dobre relacje ze Sponsorem projektu.",
+                                        "Analiza przepływów pieniężnych pozwoli wskazać źródła finansowania w projekcie.",
+                                        "Analiza przepływów pieniężnych pozwoli sprawdzić, czy wewnętrzne finansowanie w organizacji zapewnia potrzebne środki finansowe w każdym momencie projektu"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co powinien zawierać budżet projektu?",
+                                "correct_answer": "Rezerwy stanowiące zabezpieczenie przed niepewnością (rezerwa zarządcza), ryzykiem (rezerwa na ryzyko) i roszczeniami",
+                                "questions": [
+                                        "Pełną listę pracowników zaangażowanych w projekt",
+                                        "Harmonogram realizacji wszystkich etapów projektu",
+                                        "Dokładny czas potrzebny na realizację każdego z etapów projektu",
+                                        "Rezerwy stanowiące zabezpieczenie przed niepewnością (rezerwa zarządcza), ryzykiem (rezerwa na ryzyko) i roszczeniami"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jesteś kierownikiem projektu modernizacji parku przy zamku w Malborku, który ma trwać 1 rok i ma budżet 800 000 zł. Jest 7-my miesiąc realizacji i wydałeś do tej pory 500 000 zł, ale wykonałeś tylko 50% prac. Ile jeszcze będziesz musiał wydać do ukończenia projektu, jeżeli wskaźnik wydajności kosztowej pozostanie bez zmian?",
+                                "correct_answer": "500 000 zł",
+                                "questions": [
+                                        "EV = 50% × 800 000 = 400 000",
+                                        "AC = 500 000",
+                                        "CPI = EV / AC = 400 000 / 500 000 = 0,8",
+                                        "ETC = (BAC – EV) / CPI = (800 000 – 400 000) / 0,8 = 400 000 / 0,8 = 500 000",
+                                        "500 000 zł"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie elementy powinno obejmować zarządzanie finansami projektu?",
+                                "correct_answer": "Wszystkie wymienione",
+                                "questions": [
+                                        "Znajomość finansowania wewnętrznego i zewnętrznego, oraz umiejętność prognozowania przyszłej wydajności",
+                                        "Ustanowienie systemów zarządzania kosztami i monitorowanie stanu finansów",
+                                        "Oszacowanie potrzebnych kosztów i zdefiniowanie budżetu projektu",
+                                        "Wszystkie wymienione"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co powinna robić jednostka z opracowanym strategicznym planem zasobów?",
+                                "correct_answer": "Dostosować go do zaistniałych okoliczności we właściwych momentach",
+                                "questions": [
+                                        "Wdrożyć go bez oceny",
+                                        "Zignorować go, jeśli zasoby są obecnie dostępne",
+                                        "Przestrzegać go bez żadnych zmian",
+                                        "Dostosować go do zaistniałych okoliczności we właściwych momentach"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co jest celowe po opisaniu zapotrzebowania na zasoby dla realizacji projektu?",
+                                "correct_answer": "Przeprowadzić bardziej szczegółową analizę, która precyzuje kiedy, jakiej jakości i w jakiej ilości zasoby muszą być dostępne",
+                                "questions": [
+                                        "Zwołać zespół projektowy na spotkanie",
+                                        "Przeprowadzić jedynie podstawową analizę",
+                                        "Stworzyć pierwszą wersję projektu",
+                                        "Przeprowadzić bardziej szczegółową analizę, która precyzuje kiedy, jakiej jakości i w jakiej ilości zasoby muszą być dostępne"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co może wymagać zmiany harmonogramu zadań oraz zmian w zasobach koniecznych do realizacji aktualnych lub przyszłych zadań?",
+                                "correct_answer": "Konflikty dostępności zasobów z powodu nieoczekiwanych sytuacji.",
+                                "questions": [
+                                        "Niewłaściwe narzędzia do wykonania zadania.",
+                                        "Zmiana harmonogramu całego projektu.",
+                                        "Brak kompetencji u personelu.",
+                                        "Konflikty dostępności zasobów z powodu nieoczekiwanych sytuacji."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co obejmuje zarządzanie zasobami?",
+                                "correct_answer": "Zdefiniowanie, pozyskanie, kontrolę i rozwój wszystkiego, co jest niezbędne do osiągnięcia rezultatów projektu",
+                                "questions": [
+                                        "Pozyskanie i kontrolę finansów.",
+                                        "Ludzi potrzebnych do wykonania projektu.",
+                                        "Materiały i sprzęt potrzebne do przeprowadzenia projektu.",
+                                        "Zdefiniowanie, pozyskanie, kontrolę i rozwój wszystkiego, co jest niezbędne do osiągnięcia rezultatów projektu"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Macierz odpowiedzialności (RAM) to:",
+                                "correct_answer": "tabela przedstawiająca zasoby projektu przypisane do poszczególnych pakietów prac, w celu jednoznacznego przedstawienia odpowiedzialności za poszczególne działania",
+                                "questions": [
+                                        "dokument tekstowy, w którym szczegółowo opisano obowiązki członków zespołu projektowego",
+                                        "przedstawiony w formie graficznej klasyczny schemat struktury organizacyjnej służący do przedstawienia stanowisk oraz zależności między nimi",
+                                        "prezentacja struktury organizacyjnej w formie wykresu wraz ze szczegółowym opisem ról i obowiązków poszczególnych osób zaangażowanych w realizację projektu",
+                                        "tabela przedstawiająca zasoby projektu przypisane do poszczególnych pakietów prac, w celu jednoznacznego przedstawienia odpowiedzialności za poszczególne działania"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Strategiczny plan zasobów to:",
+                                "correct_answer": "plan, który wskazuje, kto jest odpowiedzialny za jakość, określenie zasobów, przydział zgodnie z harmonogramem, ich rozwój i dystrybucję.",
+                                "questions": [
+                                        "plan, który opisuje sposób pozyskania zasobów do projektu.",
+                                        "plan, który przedstawia rodzaj i ilość zasobów niezbędnych dla realizacji projektu",
+                                        "plan, który określa kiedy zasoby niezbędne w projekcie mają być dostępne.",
+                                        "plan, który wskazuje, kto jest odpowiedzialny za jakość, określenie zasobów, przydział zgodnie z harmonogramem, ich rozwój i dystrybucję."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Doszło do sporu dotyczącego zapisów kontraktu, które Zamawiający i Wykonawca interpretują w sposób korzystny wyłącznie dla siebie. Zamawiający nakazuje wykonać określone prace, ale Wykonawca nie czuje się zobowiązany kontraktem do ich wykonania. Który z poniższych sposobów działania powinien przynieść najlepsze rezultaty?",
+                                "correct_answer": "Należy wykonać wymagane prace i wystosować roszczenie oparte na kontrakcie, a następnie pracować wspólnie nad jego rozwiązaniem.",
+                                "questions": [
+                                        "Należy przeprowadzić audyt procesów zamówień i kontraktów.",
+                                        "Należy zawiesić prace i powołać mediatora z zewnątrz lub skierować sprawę do arbitrażu.",
+                                        "Należy zakończyć kontrakt z tym dostawcą, wypełnić rejestr wiedzy nabytej i poszukać nowego dostawcy.",
+                                        "Należy wykonać wymagane prace i wystosować roszczenie oparte na kontrakcie, a następnie pracować wspólnie nad jego rozwiązaniem."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie elementy powinien obejmować plan zamówień?",
+                                "correct_answer": "Procedury wyboru dostawców",
+                                "questions": [
+                                        "Koszt kontraktu",
+                                        "Wysokość wynagrodzenia dla pracowników organizacji",
+                                        "Liczba godzin przepracowanych przez dostawcę",
+                                        "Procedury wyboru dostawców"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co obejmuje proces zamówień i kontraktów?",
+                                "correct_answer": "Proces od planowania zamówień po zakup i administrację kontraktami",
+                                "questions": [
+                                        "Wyłącznie proces negocjacji z dostawcami",
+                                        "Tylko proces zakupu",
+                                        "Proces logistyczny po dostarczeniu zamówienia",
+                                        "Proces od planowania zamówień po zakup i administrację kontraktami"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Dlaczego powinno się traktować zamówienia między jednostkami tego samego podmiotu prawnego tak, jak gdyby odbywało się pomiędzy niezależnymi stronami?",
+                                "correct_answer": "Dla zapewnienia równego traktowania i kontroli procesu.",
+                                "questions": [
+                                        "W celu zwiększenia zysków organizacji.",
+                                        "W celu dostosowania się do zewnętrznych regulacji.",
+                                        "Aby uniknąć zakłóceń w organizacji.",
+                                        "Dla zapewnienia równego traktowania i kontroli procesu."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Kto może zarządzać zamówieniami w ramach projektu?",
+                                "correct_answer": "Osoby z działu prawnego lub finansowego",
+                                "questions": [
+                                        "Wyłącznie osoba przypisana do projektu",
+                                        "Kierownicy z innych projektów",
+                                        "Specjaliści z działu technicznego",
+                                        "Osoby z działu prawnego lub finansowego"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie kroki składają się na podstawowy proces prowadzący do pozyskania przedmiotu zamówienia według standardu IPMA ICB 4?",
+                                "correct_answer": "Określenie specyfikacji, identyfikacja dostawców, negocjacje, wybór dostawcy, administrowanie kontraktem.",
+                                "questions": [
+                                        "Anulowanie zamówienia w razie problemów ze wskazanym dostawcą.",
+                                        "Zidentyfikowanie dostawców, wybór najtańszej oferty, podpisanie umowy.",
+                                        "Definiowanie potrzeb, negocjacje, podpisanie umowy.",
+                                        "Określenie specyfikacji, identyfikacja dostawców, negocjacje, wybór dostawcy, administrowanie kontraktem."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Celem monitorowania projektu jest:",
+                                "correct_answer": "porównanie aktualnego stanu projektu z planem w celu zidentyfikowania i objaśnienia odchyleń.",
+                                "questions": [
+                                        "ocena projektu i sposobu zarządzania projektem pod kątem legalności, gospodarności, celowości, rzetelności.",
+                                        "znalezienie i ukaranie winnych zaistniałych odchyleń w projekcie.",
+                                        "ocena (ewaluacja) projektu.",
+                                        "porównanie aktualnego stanu projektu z planem w celu zidentyfikowania i objaśnienia odchyleń."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie procesy powinny być wprowadzone po zainicjowaniu projektu?",
+                                "correct_answer": "Procesy planowania i monitorowania",
+                                "questions": [
+                                        "Procesy analizy ryzyka i weryfikacji jakości",
+                                        "Procesy zapewniania satysfakcji interesariuszy i kontroli zmian",
+                                        "Procesy finansowe i administracyjne",
+                                        "Procesy planowania i monitorowania"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie elementy łączy ze sobą kompetencja planowania i kontroli?",
+                                "correct_answer": "Planowanie, realizacja, monitorowanie, korekta planu lub korekta realizacji",
+                                "questions": [
+                                        "Struktura organizacyjna i zespoły",
+                                        "Decyzje i informacje",
+                                        "Sprawozdania i interesariusze",
+                                        "Planowanie, realizacja, monitorowanie, korekta planu lub korekta realizacji"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie aspekty są ważne dla skutecznej kontroli projektu?",
+                                "correct_answer": "Stałe ulepszanie sposobów kontroli i dostosowywanie ich do bieżącej sytuacji.",
+                                "questions": [
+                                        "Rzadkie monitorowanie postępów prac.",
+                                        "Regularne aktualizowanie planu tylko na początku projektu.",
+                                        "Brak konieczności aktualizacji planu w trakcie realizacji projektu.",
+                                        "Stałe ulepszanie sposobów kontroli i dostosowywanie ich do bieżącej sytuacji."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie czynności obejmuje cykliczny proces zarządzania projektem?",
+                                "correct_answer": "Planowanie, realizacja, monitorowanie, korekta planu lub korekta realizacji",
+                                "questions": [
+                                        "Planowanie, kontrola kosztów, zamykanie projektu",
+                                        "Planowanie, realizacja, podsumowanie",
+                                        "Realizacja, monitorowanie, korekta planu",
+                                        "Planowanie, realizacja, monitorowanie, korekta planu lub korekta realizacji"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jaki jest kolejny niezbędny element kontroli projektu po planowym zakończeniu danej fazy z cyklu życia projektu?",
+                                "correct_answer": "Sprawozdanie z rezultatów projektu, sukcesów i nabytej wiedzy",
+                                "questions": [
+                                        "Ewaluacja finansowa projektu",
+                                        "Przegląd zasobów ludzkich",
+                                        "Analiza ryzyka",
+                                        "Sprawozdanie z rezultatów projektu, sukcesów i nabytej wiedzy"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co powinien zawierać plan zarządzania ryzykiem w projekcie?",
+                                "correct_answer": "Definicje metod stosowanych do identyfikacji, klasyfikacji, ewaluacji, oceny i ew. przeciwdziałania ryzyku.",
+                                "questions": [
+                                        "Zasady zarządzania ryzykiem w organizacji.",
+                                        "Krajowe lub branżowe standardy zarządzania ryzykiem.",
+                                        "Metody stosowane tylko do identyfikacji i klasyfikacji ryzyka.",
+                                        "Definicje metod stosowanych do identyfikacji, klasyfikacji, ewaluacji, oceny i ew. przeciwdziałania ryzyku."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Kiedy w projekcie wykonuje się identyfikację ryzyka?",
+                                "correct_answer": "Identyfikacja ryzyka powinna być zadaniem o charakterze ciągłym.",
+                                "questions": [
+                                        "Na polecenie kierownika projektu.",
+                                        "Na starcie projektu.",
+                                        "Na polecenie sponsora projektu.",
+                                        "Identyfikacja ryzyka powinna być zadaniem o charakterze ciągłym."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie techniki są przykładami oceny ilościowej?",
+                                "correct_answer": "Analiza Monte Carlo i technika drzew decyzyjnych",
+                                "questions": [
+                                        "Analiza Pareto i analiza SWOT",
+                                        "Metoda PERT i analiza Pareto",
+                                        "Analiza SWOT i technika drzew decyzyjnych",
+                                        "Analiza Monte Carlo i technika drzew decyzyjnych"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Plan awaryjny (rezerwowy):",
+                                "correct_answer": "Jest tworzony na wypadek wystąpienia ryzyka przez kierownika projektu",
+                                "questions": [
+                                        "Jest tworzony po wystąpieniu ryzyka przez Przewodniczącego Komitetu Sterującego",
+                                        "Jest tworzony po wystąpieniu ryzyka przez kierownika projektu",
+                                        "Jest tworzony na wypadek wystąpienia ryzyka przez Przewodniczącego Komitetu Sterującego",
+                                        "Jest tworzony na wypadek wystąpienia ryzyka przez kierownika projektu"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co jest wymagane w przypadku zagrożenia, którego nie można zaakceptować oraz szans, z których należy skorzystać?",
+                                "correct_answer": "Odpowiedni plan reagowania.",
+                                "questions": [
+                                        "Ignorowanie szans i zagrożeń",
+                                        "Poinformowanie wszystkich członków zespołu o ryzyku.",
+                                        "Priorytetowe potraktowanie innych zagrożeń.",
+                                        "Odpowiedni plan reagowania."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Czego dotyczy proces identyfikacji ryzyka w projekcie?",
+                                "correct_answer": "Proces identyfikacji ryzyka rozpoznaje zarówno zagrożenia, jak i szanse.",
+                                "questions": [
+                                        "Proces identyfikacji ryzyka ogranicza się do rozpoznania zagrożeń.",
+                                        "Proces identyfikacji ryzyka skupia się wyłącznie na znalezieniu szans na sukces projektu.",
+                                        "Proces identyfikacji ryzyka koncentruje się na rozpoznawaniu zagrożeń wewnętrznych.",
+                                        "Proces identyfikacji ryzyka rozpoznaje zarówno zagrożenia, jak i szanse."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Które z elementów należy stale monitorować przy realizacji strategii angażowania interesariuszy?",
+                                "correct_answer": "Środowisko interesariuszy i ewentualne zmiany",
+                                "questions": [
+                                        "Inwestycje finansowe w infrastrukturę projektową",
+                                        "Postępy prac poszczególnych członków zespołu projektowego",
+                                        "Harmonogram działań marketingowych projektu",
+                                        "Środowisko interesariuszy i ewentualne zmiany"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co może oznaczać zaangażowanie interesariuszy w projekcie?",
+                                "correct_answer": "Budowę strategicznego partnerstwa prowadzącego do zwiększenia potencjału organizacyjnego",
+                                "questions": [
+                                        "Konieczność zwiększenia liczby spotkań zespołu projektowego",
+                                        "Skupienie wyłącznie na celach finansowych projektu",
+                                        "Zwiększenie liczby zadań z obszaru zarządzania jakością",
+                                        "Budowę strategicznego partnerstwa prowadzącego do zwiększenia potencjału organizacyjnego"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "W jaki sposób można realizować strategię angażowania interesariuszy?",
+                                "correct_answer": "Poprzez sojusze, aktywną współpracę i formalne i nieformalne sieci powiązań",
+                                "questions": [
+                                        "Dzięki jednostronnej informacji wysyłanej przez kierownika projektu",
+                                        "Koncentrując się wyłącznie na formalnych kanałach komunikacji",
+                                        "Poprzez zwiększenie liczby spotkań projektowych",
+                                        "Poprzez sojusze, aktywną współpracę i formalne i nieformalne sieci powiązań"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie osoby lub organizacje zaliczają się do interesariuszy projektu?",
+                                "correct_answer": "Wyłącznie osoby z bezpośredniego otoczenia menedżera projektu",
+                                "questions": [
+                                        "Tylko osoby zainteresowane rezultatem projektu",
+                                        "Tylko członków zespołu projektowego",
+                                        "Wyłącznie osoby z bezpośredniego otoczenia menedżera projektu"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Dlaczego istotna jest strategia angażowania interesariuszy w projekcie?",
+                                "correct_answer": "Ze względu na różne potrzeby informacyjne poszczególnych interesariuszy",
+                                "questions": [
+                                        "W celu dokładniejszego monitorowania postępów projektu",
+                                        "Aby przyznać im dodatkowe środki finansowe",
+                                        "Dla ułatwienia wymiany informacji z zewnątrz",
+                                        "Ze względu na różne potrzeby informacyjne poszczególnych interesariuszy"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Kogo możemy zaliczyć do interesariuszy projektu?",
+                                "correct_answer": "osoby lub jednostki mające potrzeby i oczekiwania, które muszą zostać zidentyfikowane i zaspokojone",
+                                "questions": [
+                                        "wszystkich, którzy dzielą wspólne pragnienia zobaczyć projekt zakończony sukcesem",
+                                        "zainteresowane strony poza organizacją realizującą projekt",
+                                        "tylko kierownika projektu, sponsora i klienta",
+                                        "osoby lub jednostki mające potrzeby i oczekiwania, które muszą zostać zidentyfikowane i zaspokojone"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Projekt ma wprowadzić zmiany, które dotkną bezpośrednio interesów różnych grup społecznych. W celu poprawnego określenia obszarów wymagających zmian należy:",
+                                "correct_answer": "zidentyfikować grupy i osoby dotknięte zmianą, regularnie prowadzić wywiady, rozmowy i mapować różne grupy interesów zbierając i analizując otrzymane informacje.",
+                                "questions": [
+                                        "zatrudnić zewnętrzną firmę dla przeprowadzenia audytu.",
+                                        "przedyskutować to zagadnienie w gronie kierowniczym organizacji wprowadzającej zmiany.",
+                                        "Przeprowadzić ankietę telefoniczną na wybranych losowo osobach.",
+                                        "zidentyfikować grupy i osoby dotknięte zmianą, regularnie prowadzić wywiady, rozmowy i mapować różne grupy interesów zbierając i analizując otrzymane informacje."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie podejście należy zastosować, gdy zmiany lub transformacja mają wyraźne konsekwencje?",
+                                "correct_answer": "Podejście stopniowe/krokowe",
+                                "questions": [
+                                        "Podejście ekspresowe",
+                                        "Podejście błyskawiczne",
+                                        "Podejście skondensowane",
+                                        "Podejście stopniowe/krokowe"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie elementy są kluczowe w strategii zmiany lub transformacji?",
+                                "correct_answer": "Nauka, monitorowanie oraz ocena tego, co działa i tego, co nie działa oraz w jakich sytuacjach",
+                                "questions": [
+                                        "Dokładne daty, osoby odpowiedzialne za zmianę oraz plan B w przypadku niepowodzenia",
+                                        "Osobiste preferencje lidera zmian oraz decyzje podejmowane na podstawie intuicji",
+                                        "Lista wszystkich możliwych zmian, które mogą zaistnieć oraz ich potencjalne konsekwencje",
+                                        "Nauka, monitorowanie oraz ocena tego, co działa i tego, co nie działa oraz w jakich sytuacjach"
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "W organizacji prowadzony jest wewnętrzny projekt restrukturyzacji prowadzący do głębokich zmian organizacyjnych. Które działania będą najlepiej wspierać proces transformacji?",
+                                "correct_answer": "Szeroka akcja informacyjna prowadzona poprzez sesje informacyjne, warsztaty tworzenia wizji strategicznych, szkolenia, gry strategiczne, itp.",
+                                "questions": [
+                                        "Wymiana osób na kluczowych stanowiskach których nastawienie jest niechętne zmianom.",
+                                        "Akcja indywidualnych rozmów prowadzona przez dział spraw osobowych.",
+                                        "Spotkanie Prezesa z całą załogą firmy informujące o podjętych krokach i motywujące do przyjęcia zmian.",
+                                        "Szeroka akcja informacyjna prowadzona poprzez sesje informacyjne, warsztaty tworzenia wizji strategicznych, szkolenia, gry strategiczne, itp."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie czynniki wpływają na poziom zarządzania zmianą i transformacją wymaganą przez przedsięwzięcie?",
+                                "correct_answer": "Ilość zakłóceń powstałych w codziennej pracy jednostek i grup, kultura, system wartości i historia przeszłych zmian.",
+                                "questions": [
+                                        "Stopień zaawansowania technologicznego organizacji.",
+                                        "Doświadczenie kadry zarządzającej projektem.",
+                                        "Ilość zakłóceń powstałych w codziennej pracy jednostek i grup.",
+                                        "Ilość zakłóceń powstałych w codziennej pracy jednostek i grup, kultura, system wartości i historia przeszłych zmian."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Które z czynników wpływają na zdolność, możliwość i gotowość organizacji i ludzi do zmian?",
+                                "correct_answer": "Poprzednie sukcesy i porażki, stres i presja, zrozumienie potrzeby zmiany, kultura i atmosfera oraz widzenie pozytywnych i negatywnych perspektyw.",
+                                "questions": [
+                                        "Doświadczenie zarządu firmy, liczba konkurentów na rynku, strategia marketingowa.",
+                                        "Poziom zarobków pracowników, lokalizacja firmy, jakość produktów.",
+                                        "Wielkość organizacji, liczba zatrudnionych pracowników, rodzaj prowadzonej działalności.",
+                                        "Poprzednie sukcesy i porażki, stres i presja, zrozumienie potrzeby zmiany, kultura i atmosfera oraz widzenie pozytywnych i negatywnych perspektyw."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie czynniki są uwzględniane podczas procesu dostosowania strategii w organizacji?",
+                                "correct_answer": "Zrównoważony rozwój organizacji.",
+                                "questions": [
+                                        "Poziom zaangażowania pracowników.",
+                                        "Czy inwestorzy są zadowoleni z wyników.",
+                                        "Szybkie osiągnięcie wyników.",
+                                        "Zrównoważony rozwój organizacji."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co powinny obejmować plany strategiczne zgodnie z kompetencją Strategia?",
+                                "correct_answer": "Długoterminowe wizje i strategie średnio- i krótkoterminowe dostosowane do misji i wartości organizacji.",
+                                "questions": [
+                                        "Tylko cele związane z zyskami.",
+                                        "Cele długoterminowe i średnioterminowe, niezależne od misji organizacji.",
+                                        "Działania operacyjne na najbliższy kwartał.",
+                                        "Długoterminowe wizje i strategie średnio- i krótkoterminowe dostosowane do misji i wartości organizacji."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co opisuje kompetencja Strategia w kontekście zarządzania projektami?",
+                                "correct_answer": "Jaki system zarządzania wykonaniem projektów powinien być zastosowany.",
+                                "questions": [
+                                        "Dlaczego projekty są ważne dla organizacji.",
+                                        "Kto jest odpowiedzialny za alokację zasobów w organizacji.",
+                                        "Jakie są krótkoterminowe cele organizacji.",
+                                        "Jaki system zarządzania wykonaniem projektów powinien być zastosowany."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Kierownik realizując projekt powinien:",
+                                "correct_answer": "dbać o to, aby uzasadnienie biznesowe było aktualne i zgodne z misją, wizją i strategią organizacji.",
+                                "questions": [
+                                        "nie używać do kontroli projektu krytycznych czynników sukcesu.",
+                                        "troszczyć się tylko o ukończenie projektu w zaplanowanym czasie.",
+                                        "realizować projekt w każdych warunkach, niezależnie od uzasadnienia biznesowego.",
+                                        "dbać o to, aby uzasadnienie biznesowe było aktualne i zgodne z misją, wizją i strategią organizacji."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Do czego służy formalne uzasadnienie celów projektu zgodnie z kompetencją Strategia?",
+                                "correct_answer": "Dekomponowaniu celów strategicznych na elementy łatwe do zarządzania.",
+                                "questions": [
+                                        "Kontroli nad realizacją projektu.",
+                                        "Określeniu krótkoterminowych celów organizacji.",
+                                        "Motywacji pracowników do działania.",
+                                        "Dekomponowaniu celów strategicznych na elementy łatwe do zarządzania."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Jakie są korzyści z realizacji celów strategicznych według kompetencji Strategia?",
+                                "correct_answer": " Dostosowanie do strategii i wizji organizacji.",
+                                "questions": [
+                                        "Zdolności i doświadczenie zespołu projektowego.",
+                                        "Wsparcie polityczne dla inwestorów.",
+                                        "Tylko aktualne potrzeby projektu.",
+                                        " Dostosowanie do strategii i wizji organizacji."
+                                ],
+                                "category": "Praktyka"
+                        },
+                        {
+                                "question": "Co powinien potrafić zrobić kompetentny lider projektu w kontekście struktur i procesów organizacyjnych?",
+                                "correct_answer": "Stosować informację zwrotną i dokonywać przeglądu wniosków",
+                                "questions": [
+                                        "Zapewniać rozproszenie informacji",
+                                        "Wprowadzać chaos w organizacji",
+                                        "Ignorować obowiązujące struktury",
+                                        "Stosować informację zwrotną i dokonywać przeglądu wniosków"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Jakie są przykłady struktur i procesów wspierających projekty?",
+                                "correct_answer": "Funkcje liniowe oraz biuro zarządzania projektami (PMO)",
+                                "questions": [
+                                        "Działania biura zarządzania projektami (PMO)",
+                                        "Tylko funkcje liniowe",
+                                        "Brak struktur i procesów wspierających",
+                                        "Funkcje liniowe oraz biuro zarządzania projektami (PMO)"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Co obejmują struktury i procesy organizacyjne w kontekście zarządzania projektami?",
+                                "correct_answer": "Zarówno systemy tymczasowe, jak i stałe",
+                                "questions": [
+                                        "Tylko systemy stałe",
+                                        "Żadne z powyższych",
+                                        "Tylko systemy tymczasowe",
+                                        "Zarówno systemy tymczasowe, jak i stałe"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Co oznacza dostosowanie struktur i procesów w kontekście zarządzania projektami?",
+                                "correct_answer": "Wykorzystanie systemów wartości, ról, procesów i zasad organizacji",
+                                "questions": [
+                                        "Ignorowanie istniejących systemów",
+                                        "Brak znaczenia struktur i procesów",
+                                        "Odpowiedź na potrzeby jedynie projektu",
+                                        "Wykorzystanie systemów wartości, ról, procesów i zasad organizacji"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Jakie wyzwania może stawiać zarządzanie projektami zgodnie ze strukturami i procesami organizacyjnymi?",
+                                "correct_answer": "Zachowanie równowagi pomiędzy obligatoryjnymi i opcjonalnymi strukturami i procesami",
+                                "questions": [
+                                        "Brak znaczenia procesów",
+                                        "Ignorowanie struktur",
+                                        "Brak wyzwań",
+                                        "Zachowanie równowagi pomiędzy obligatoryjnymi i opcjonalnymi strukturami i procesami"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Biuro zarządzania projektami (PMO) jest strukturą, która powoływana jest w:",
+                                "correct_answer": " Korzysta ze wsparcia działu zarządzania zasobami ludzkimi, przedstawiając szczegółowo wynikające z prowadzonego projektu.",
+                                "questions": [
+                                        "Organizuje samodzielnie proces doboru i zapewnienia dostępności zasobami ludzkimi.",
+                                        "Oczekuje na konkretne wskazania działu zarządzania zasobami ludzkimi, który odpowiada za jakość i dostępność kadr.",
+                                        "Nie podejmuje żadnych działań – nie jest to jego zadanie.",
+                                        " Korzysta ze wsparcia działu zarządzania zasobami ludzkimi, przedstawiając szczegółowo wynikające z prowadzonego projektu."
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Czym jest benchmarking związany z elementem kompetencji dotyczącym zgodności, norm i przepisów?",
+                                "correct_answer": "Analiza porównawcza",
+                                "questions": [
+                                        "Ocena wewnętrzna",
+                                        "Analiza konkurencji",
+                                        "Metoda eksperymentalna",
+                                        "Analiza porównawcza"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Co powinien zrobić kierownik projektu przed rozpoczęciem projektu związanego z normami i przepisami?",
+                                "correct_answer": "Dokonać analizy zakresu i organizacji projektu",
+                                "questions": [
+                                        "Zidentyfikować jedynie ustawowe wymagania",
+                                        "Zignorować wpływ norm i przepisów na projekt",
+                                        "Pominąć analizę norm i przepisów",
+                                        "Dokonać analizy zakresu i organizacji projektu"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Kierownik projektu realizując projekt:",
+                                "correct_answer": "Musi obowiązkowo zidentyfikować i określić normy BHP i ochrony środowiska wpływające na projekt.",
+                                "questions": [
+                                        "Ma dowolność w uwzględnianiu przepisów BHP i aspektów środowiskowych.",
+                                        "W analizie ryzyka nie musi uwzględniać aspektów środowiskowych.",
+                                        "Musi uwzględnić w projekcie wyłącznie przepisy BHP.",
+                                        "Musi obowiązkowo zidentyfikować i określić normy BHP i ochrony środowiska wpływające na projekt."
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Co może wyniknąć z niezgodności z właściwymi normami i przepisami?",
+                                "correct_answer": "Zagrożenia i szanse",
+                                "questions": [
+                                        "Brak jakiejkolwiek reakcji",
+                                        "Brak akceptacji",
+                                        "Brak wpływu na projekt",
+                                        "Zagrożenia i szanse"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Dlaczego zgodność z właściwymi normami i przepisami może wpłynąć na strukturę, procesy i kulturę organizacyjną?",
+                                "correct_answer": "Ponieważ normy określają sposób organizacji i zarządzania",
+                                "questions": [
+                                        "Ponieważ normy zawsze są problematyczne",
+                                        "Ponieważ normy są nieistotne dla wielu organizacji",
+                                        "Ponieważ normy nie mają wpływu na procesy",
+                                        "Ponieważ normy określają sposób organizacji i zarządzania"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Jakie aspekty obejmuje element kompetencji dotyczący zgodności, norm i przepisów?",
+                                "correct_answer": "Spektrum od dobrowolnych i nieformalnych wymogów do tych, które są obowiązkowe i formalne",
+                                "questions": [
+                                        "Aspekty wyłącznie obowiązkowe",
+                                        "Tylko aspekty formalne",
+                                        "Wyłącznie wymagania umowne",
+                                        "Spektrum od dobrowolnych i nieformalnych wymogów do tych, które są obowiązkowe i formalne"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "W trakcie spotkania po pracy z jednym z kierowników liniowych (dyrektorem pionu HR) organizacji, kierownik projektu uzyskał od niego zgodę na wykorzystanie jednego z pracowników pionu w charakterze doradcy przy realizowanym przez niego projekcie. Do tej pory taka pomoc nie była możliwa z uwagi na wewnętrzne uwarunkowania organizacji. Jest to przykład wykorzystania:",
+                                "correct_answer": "nieformalnego wpływu kierownika projektu",
+                                "questions": [
+                                        "władzy przeniesienia",
+                                        "formalnej władzy kierownika projektu",
+                                        "relacji pomiędzy kierownikiem projektu a dyrektorem pionu HR",
+                                        "nieformalnego wpływu kierownika projektu"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Jak można odróżnić formalną władzę od nieformalnych wpływów w grupach formalnych?",
+                                "correct_answer": "W grupach formalnych należy zachować ostrożność, odróżniać rolę formalnej władzy od nieformalnych wpływów",
+                                "questions": [
+                                        "W grupach formalnych nie występują nieformalne struktury",
+                                        "Grupy formalne nie posiadają żadnej władzy",
+                                        "Grupy formalne zawsze działają zgodnie z interesami osobistymi",
+                                        "W grupach formalnych należy zachować ostrożność, odróżniać rolę formalnej władzy od nieformalnych wpływów"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Dlaczego zrozumienie i umiejętność korzystania z nieformalnych interesów osobistych i polityki jest istotne dla sukcesu projektu?",
+                                "correct_answer": "Ponieważ nieformalne interesy mogą zarówno wspierać, jak i utrudniać realizację projektu",
+                                "questions": [
+                                        "Ponieważ nieformalne interesy mogą zaszkodzić realizacji projektu",
+                                        "Ponieważ interesy osobiste nie mają wpływu na przebieg projektu",
+                                        "Ponieważ formalne interesy są zawsze dominujące",
+                                        "Ponieważ nieformalne interesy mogą zarówno wspierać, jak i utrudniać realizację projektu"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Czym jest zainteresowanie w kontekście zarządzania projektem?",
+                                "correct_answer": "Odczuwanie pragnienia lub niechęci do danego rezultatu",
+                                "questions": [
+                                        "Brak zainteresowania projektem",
+                                        "Skupienie na realizacji celów projektu",
+                                        "Wpływ na decyzje grupowe w projekcie",
+                                        "Odczuwanie pragnienia lub niechęci do danego rezultatu"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Jakie mogą być konsekwencje nieuwzględnienia nieformalnych interesów w projekcie?",
+                                "correct_answer": "Negatywny wpływ na realizację projektu",
+                                "questions": [
+                                        "Poprawa relacji z interesariuszami",
+                                        "Brak znaczenia dla polityki projektowej",
+                                        "Brak konsekwencji dla projektu",
+                                        "Negatywny wpływ na realizację projektu"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Co to jest nieformalna władza w kontekście zarządzania projektem?",
+                                "correct_answer": "Władza, która nie jest ugruntowana formalną rolą, strukturą lub procesem",
+                                "questions": [
+                                        "Władza ugruntowana w formalnych strukturach organizacyjnych",
+                                        "Władza wynikająca z posiadanych zasobów finansowych",
+                                        "Władza wynikająca z pełnionej funkcji w projekcie",
+                                        "Władza, która nie jest ugruntowana formalną rolą, strukturą lub procesem"
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Na czym polega adaptacja zewnętrzna i wewnętrzna integracja w projekcie?",
+                                "correct_answer": "Na dostosowaniu wewnętrznej kultury projektu do kultur zewnętrznych.",
+                                "questions": [
+                                        "Na ignorowaniu wartości organizacyjnych.",
+                                        "Na zastępowaniu członków zespołu projektowego nowymi.",
+                                        "Na prowadzeniu projektu bez uwzględnienia społeczności.",
+                                        "Na dostosowaniu wewnętrznej kultury projektu do kultur zewnętrznych."
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Dlaczego dostosowanie kultury i wartości jest ważne w przypadku projektów realizowanych na obszarze różnych społeczności?",
+                                "correct_answer": "Ponieważ tworzy to środowisko sprzyjające efektywnemu osiąganiu celów projektu.",
+                                "questions": [
+                                        "Dla zysku firmy.",
+                                        "Ponieważ tworzy to lepsze relacje międzyludzkie.",
+                                        "Ponieważ jest to wymóg standardów ISO.",
+                                        "Ponieważ tworzy to środowisko sprzyjające efektywnemu osiąganiu celów projektu."
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Jak standard IPMA ICB 4.0 definiuje element kompetencji \"Kultura i Wartości\"?",
+                                "correct_answer": "Opisuje podejście jednostki do wpływania na kulturę i wartości organizacji oraz jak włączyć tę wiedzę w zarządzanie projektem.",
+                                "questions": [
+                                        "Opisuje jak tworzyć budżet projektu.",
+                                        "Opisuje jak zarządzać harmonogramem projektu.",
+                                        "Opisuje jak prowadzić rekrutację do zespołu projektowego.",
+                                        "Opisuje podejście jednostki do wpływania na kulturę i wartości organizacji oraz jak włączyć tę wiedzę w zarządzanie projektem."
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Czym jest kultura według tekstu standardu IPMA ICB 4?",
+                                "correct_answer": "Kultura to zespół koncepcji, na których jednostki w społeczności opierają swoje działania.",
+                                "questions": [
+                                        "Kultura to wyłącznie aspekty formalne w organizacji.",
+                                        "Kultura to elementy techniczne w projekcie.",
+                                        "Kultura to wyłącznie zbiór specyficznych zachowań jednostek.",
+                                        "Kultura to zespół koncepcji, na których jednostki w społeczności opierają swoje działania."
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Nieformalna kultura organizacyjna:",
+                                "correct_answer": "umożliwia integrację wokół środków przyjętych dla realizacji celów firmy oraz zwiększenie zaangażowania pracowników.",
+                                "questions": [
+                                        "jest groźna dla organizacji i powinna być zastępowana kulturą formalną.",
+                                        "to zbiór świadomych zachowań pracowników, które wspierane są systemami motywacyjnymi organizacji.",
+                                        "nie ma znaczenia w zarządzaniu projektem.",
+                                        "umożliwia integrację wokół środków przyjętych dla realizacji celów firmy oraz zwiększenie zaangażowania pracowników."
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "Co powinien zrobić kierownik projektu przed rozpoczęciem projektu w związku z kulturą?",
+                                "correct_answer": "Powinien rozpoznać konkretną kulturę/kultury w ramach wewnętrznego i zewnętrznego kontekstu projektu i organizacji.",
+                                "questions": [
+                                        "Nic, kultura nie ma wpływu na projekt.",
+                                        "Powinien skupić się wyłącznie na harmonogramie projektu.",
+                                        "Powinien jedynie zaplanować budżet projektu.",
+                                        "Powinien rozpoznać konkretną kulturę/kultury w ramach wewnętrznego i zewnętrznego kontekstu projektu i organizacji."
+                                ],
+                                "category": "Perspektywa"
+                        },
+                        {
+                                "question": "W trakcie spotkania inicjującego projekt jego kierownik określił swoje osobiste zasady i wymagania co do projektu, sposobu pracy zespołu projektowego oraz zasad nagradzania i karania członków zespołu projektowego. Takie postępowanie:",
+                                "correct_answer": "Jest prawidłowe, ponieważ określa jasne reguły postępowania w projekcie.",
+                                "questions": [
+                                        "Jest osobistą decyzją kierownika projektu, której nie muszą brać pod uwagę członkowie zespołu.",
+                                        "Jest nieprawidłowe, ponieważ osobiste zasady i wymagania kierownika projektu nie mogą wpływać na pracę zespołu.",
+                                        "Jest prawidłowe w każdej sytuacji, nawet jeśli zasady kierownika projektu stoją w sprzeczności z normami etycznymi organizacji.",
+                                        "Jest prawidłowe, ponieważ określa jasne reguły postępowania w projekcie."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jakie korzyści przynosi refleksja nad własnymi wartościami i zachowaniami?",
+                                "correct_answer": "Możliwość zmiany i poprawy zachowania.",
+                                "questions": [
+                                        "Zwiększenie poziomu konfliktów interpersonalnych w zespole.",
+                                        "Zmniejszenie autonomii w podejmowaniu decyzji.",
+                                        "Ograniczenie możliwości awansu zawodowego.",
+                                        "Możliwość zmiany i poprawy zachowania."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jakie działanie wspomaga spójne zachowanie, podejmowanie decyzji i komunikację?",
+                                "correct_answer": "Kontrolowanie nieświadomych reakcji.",
+                                "questions": [
+                                        "Skupienie się wyłącznie na celach długoterminowych bez planowania krótkoterminowego.",
+                                        "Ignorowanie informacji zwrotnych od kolegów.",
+                                        "Unikanie refleksji nad własnymi emocjami.",
+                                        "Kontrolowanie nieświadomych reakcji."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jakie znaczenie ma zarządzanie zmieniającymi się warunkami w kontekście zarządzania sobą?",
+                                "correct_answer": "Przystosowanie postępów do aktualnej sytuacji.",
+                                "questions": [
+                                        "Izolowanie się od wpływów zewnętrznych.",
+                                        "Stałe stosowanie niezmiennych metod pracy niezależnie od sytuacji.",
+                                        "Ignorowanie zmian i skupienie na przyjętych wcześniej celach.",
+                                        "Przystosowanie postępów do aktualnej sytuacji."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co oznacza działanie autonomicznie w kontekście zarządzania sobą?",
+                                "correct_answer": "Niezależność od wpływów zewnętrznych w działaniu.",
+                                "questions": [
+                                        "Praca pod stałą kontrolą przełożonego.",
+                                        "Odwoływanie się wyłącznie do zewnętrznych źródeł informacji.",
+                                        "Unikanie odpowiedzialności za własne decyzje.",
+                                        "Niezależność od wpływów zewnętrznych w działaniu."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co jest kluczowym elementem kompetencji autorefleksji według standardu IPMA ICB 4.0?",
+                                "correct_answer": "Poznanie i refleksja nad własnymi emocjami, zachowaniami, preferencjami i wartościami.",
+                                "questions": [
+                                        "Identyfikacja potencjalnych konfliktów w zespole.",
+                                        "Krytyczne ocenianie pomysłów innych osób w projekcie.",
+                                        "Analiza własnych osiągnięć i porównanie ich z innymi.",
+                                        "Poznanie i refleksja nad własnymi emocjami, zachowaniami, preferencjami i wartościami."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co jest kluczowym elementem definiowanym jako „rzetelność” w kontekście kompetencji opisanych w standardzie IPMA ICB 4.0?",
+                                "correct_answer": "Odpowiedzialne działanie, zgodnie z oczekiwaniami i/lub przewidywalnym zachowaniem.",
+                                "questions": [
+                                        "Umiejętność skutecznej komunikacji z zespołem.",
+                                        "Zdolność do szybkiego rozwiązywania problemów.",
+                                        "Stosowanie zdefiniowanych metod zarządzania projektami.",
+                                        "Odpowiedzialne działanie, zgodnie z oczekiwaniami i/lub przewidywalnym zachowaniem."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jaki jest zamiar posiadania kompetencji „Spójność wewnętrzna i rzetelność”?",
+                                "correct_answer": "Umożliwienie jednostce podejmowanie spójnych działań i prezentowanie konsekwentnych zachowań w projektach.",
+                                "questions": [
+                                        "Poprawa umiejętności technicznych zespołu projektowego.",
+                                        "Wprowadzenie narzędzi informatycznych wspierających komunikację.",
+                                        "Zwiększenie efektywności procesów projektowych poprzez automatyzację.",
+                                        "Umożliwienie jednostce podejmowanie spójnych działań i prezentowanie konsekwentnych zachowań w projektach."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jakie zachowanie promuje jednostka, która wykazuje się uczciwością i rzetelnością w projekcie?",
+                                "correct_answer": "Stosowanie się do norm etycznych i zasad moralnych.",
+                                "questions": [
+                                        "Podejmowanie decyzji w sposób arbitralny.",
+                                        "Koncentrowanie się wyłącznie na wynikach finansowych projektu.",
+                                        "Unikanie odpowiedzialności za podjęte decyzje.",
+                                        "Stosowanie się do norm etycznych i zasad moralnych."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jakie zachowanie jest podstawą uczciwości i rzetelności w kontekście kompetencji opisanych w IPMA ICB 4.0?",
+                                "correct_answer": "Mówienie, co robimy i robienie tego, o czym mówimy.",
+                                "questions": [
+                                        "Mówienie o czymś innym niż to, co się wykonuje.",
+                                        "Podejmowanie decyzji bez konsultacji z zespołem.",
+                                        "Ignorowanie norm etycznych i zasad moralnych.",
+                                        "Mówienie, co robimy i robienie tego, o czym mówimy."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co oznacza termin „spójność wewnętrzna” w kontekście kompetencji opisanych w standardzie IPMA ICB 4.0?",
+                                "correct_answer": "Działanie zgodne z własnymi moralnymi i etycznymi wartościami i zasadami.",
+                                "questions": [
+                                        "Zgodność działań z uniwersalnymi zasadami zarządzania projektami.",
+                                        "Konsekwencję w stosowaniu narzędzi i technik projektowych.",
+                                        "Koordynację działań między różnymi działami w organizacji.",
+                                        "Działanie zgodne z własnymi moralnymi i etycznymi wartościami i zasadami."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jako kierownik projektu w trakcie spotkania kick-off określiłeś wartości jakimi będziesz się kierować w trakcie realizacji projektu. Jedną z nich było otwarte informowanie o pojawiających się problemach. W trakcie realizacji okazało się, że Wojtek, jeden z członków zespołu, nie powiedział o zaistniałym ryzyku. Teraz ryzyko to zaistniało i naraziło projekt oraz Ciebie jako lidera na nieprzyjemności ze strony klienta. Co powinieneś zrobić w takiej sytuacji?",
+                                "correct_answer": "Udzielić upomnienia Wojtkowi i jeszcze raz przypomnieć zespołowi o ważnych dla Ciebie wartościach.",
+                                "questions": [
+                                        "Powinieneś usunąć Wojtka z zespołu nie tłumacząc swojej decyzji.",
+                                        "Z uwagi na mały rozmiar szkód postanawiasz przejść nad sprawą do porządku dziennego.",
+                                        "Nie musisz nic robić.",
+                                        "Udzielić upomnienia Wojtkowi i jeszcze raz przypomnieć zespołowi o ważnych dla Ciebie wartościach."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jakie działanie należy do opisanych praktyk efektywnej komunikacji interpersonalnej?",
+                                "correct_answer": "Weryfikowanie rozumienia komunikatów poprzez aktywne słuchanie odbiorcy.",
+                                "questions": [
+                                        "Używanie jednego, uniwersalnego stylu komunikacji.",
+                                        "Ograniczenie komunikacji pisemnej na rzecz komunikacji ustnej.",
+                                        "Ignorowanie informacji zwrotnych aby przyspieszyć proces komunikacji.",
+                                        "Weryfikowanie rozumienia komunikatów poprzez aktywne słuchanie odbiorcy."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co jest głównym celem kompetencji „Komunikacja Interpersonalna” zgodnie ze standardem IPMA ICB 4.0?",
+                                "correct_answer": "Umożliwienie jednostce efektywnego porozumiewania się w różnych sytuacjach.",
+                                "questions": [
+                                        "Umożliwienie jednostce przekazywania informacji w sposób nieformalny.",
+                                        "Wzmocnienie zdolności technicznych osoby komunikującej się.",
+                                        "Zwiększenie ilości informacji przekazywanych w organizacji.",
+                                        "Umożliwienie jednostce efektywnego porozumiewania się w różnych sytuacjach."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co oznacza promowanie otwartej i szczerej komunikacji?",
+                                "correct_answer": "Zachęcanie do transparentnego dzielenia się myślami oraz uczuciami, aby zbudować zaufanie i zrozumienie.",
+                                "questions": [
+                                        "Mówienie wszystkiego, co przychodzi do głowy, niezależnie od kontekstu.",
+                                        "Skupianie się na komunikacji werbalnej, ignorując inne formy.",
+                                        "Unikanie przekazywania negatywnych informacji, aby nie demotywować zespołu.",
+                                        "Zachęcanie do transparentnego dzielenia się myślami oraz uczuciami, aby zbudować zaufanie i zrozumienie."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Która z poniższych metod nie jest rekomendowana w ramach skutecznych środków komunikacji interpersonalnej?",
+                                "correct_answer": "Stosowanie jednego uniwersalnego kanału komunikacji dla wszystkich odbiorców.",
+                                "questions": [
+                                        "Rozumienie wartości i ograniczeń różnych form komunikacji.",
+                                        "Używanie różnych środków komunikacji, takich jak prezentacje czy spotkania.",
+                                        "Promowanie otwartej i szczerej komunikacji.",
+                                        "Stosowanie jednego uniwersalnego kanału komunikacji dla wszystkich odbiorców."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jaka jest rola aktywnego słuchania w efektywnej komunikacji interpersonalnej?",
+                                "correct_answer": "Umożliwia autentyczną i dwukierunkową wymianę informacji, wzmacniając zrozumienie przekazu.",
+                                "questions": [
+                                        "Jest stosowane tylko w bardzo formalnych sytuacjach komunikacyjnych.",
+                                        "Aktywne słuchanie służy jedynie do upewnienia się, że odbiorca nie został pominięty.",
+                                        "Stosuje się je wyłącznie do identyfikacji błędów w przekazywanych informacjach.",
+                                        "Umożliwia autentyczną i dwukierunkową wymianę informacji, wzmacniając zrozumienie przekazu."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Spotkanie zespołu projektu nie przebiega dobrze. Wielu uczestników mówi równocześnie, niektórzy są nieobecni i wiele spraw dyskutowane jest chaotycznie. Która z poniższych zasad efektywnego prowadzenia spotkania została naruszona lub zaniedbana?",
+                                "correct_answer": "Odpowiednio wcześniej przesłano uczestnikom agendę spotkania i zestaw zasad, według których spotkanie będzie prowadzone.",
+                                "questions": [
+                                        "Odpowiednio wcześniej spotkanie zapowiedziano w harmonogramie.",
+                                        "Odpowiednio wcześniej zdefiniowano cel spotkania i zaproszono właściwe osoby.",
+                                        "Uczestnicy są traktowani uprzejmie z poszanowaniem i uwagą oraz dbałością o możliwość wypowiedzi.",
+                                        "Odpowiednio wcześniej przesłano uczestnikom agendę spotkania i zestaw zasad, według których spotkanie będzie prowadzone."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co według standardu IPMA ICB 4 jest fundamentem dla produktywnej współpracy?",
+                                "correct_answer": "Relacje osobiste",
+                                "questions": [
+                                        "Relacje osobiste",
+                                        "Ściśle określone procedury i zasady",
+                                        "Wysokie umiejętności techniczne indywidualnych członków zespołu",
+                                        "Systemy motywacyjne oparte na wynikach"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jakie jest ogólne podejście ludzi do angażowania się w zadania, według standardu IPMA ICB 4?",
+                                "correct_answer": "Ludzie chętniej angażują się w zadania, jeśli zostaną wcześniej o to poproszeni",
+                                "questions": [
+                                        "Ludzie chętniej angażują się w zadania, jeśli zostaną wcześniej o to poproszeni",
+                                        "Ludzie najczęściej unikają angażowania się w nowe zadania",
+                                        "Ludzie chętniej angażują się w zadania, jeśli są do nich zmuszeni",
+                                        "Ludzie angażują się tylko w te zadania, które są im bezpośrednio przypisane przez przełożonych"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co stanowi zagrożenie dla jakości relacji osobistych w kontekście różnic kulturowych?",
+                                "correct_answer": "Nieporozumienia",
+                                "questions": [
+                                        "Nieporozumienia",
+                                        "Brak wyzwań zawodowych",
+                                        "Otwarta komunikacja",
+                                        "Zbyt duże zaangażowanie w projekt"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Które kompetencje społeczne sprzyjają tworzeniu trwałych relacji zgodnie z standardem IPMA ICB 4?",
+                                "correct_answer": "Empatia, zaufanie, pewność siebie i umiejętności komunikacyjne",
+                                "questions": [
+                                        "Empatia, zaufanie, pewność siebie i umiejętności komunikacyjne",
+                                        "Kreatywność i innowacyjność",
+                                        "Znajomość narzędzi zarządzania projektami",
+                                        "Analiza danych i umiejętności techniczne"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jaki jest zamiarem elementu kompetencji dotyczącego relacji i zaangażowania?",
+                                "correct_answer": "Umożliwienie jednostce budowania i utrzymywania relacji osobistych",
+                                "questions": [
+                                        "Umożliwienie jednostce budowania i utrzymywania relacji osobistych",
+                                        "Wprowadzenie nowych technologii do projektu",
+                                        "Zwiększenie wydajności przy minimalnym zaangażowaniu zespołu",
+                                        "Zwiększenie technicznych umiejętności zespołu"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Kierownik projektu powinien dbać o budowanie sieci wzajemnych kontaktów pozwalających na efektywną wymianę informacji z możliwie najszerszym gronem osób. W tym celu powinien wykorzystać:",
+                                "correct_answer": "Networking",
+                                "questions": [
+                                        "Networking",
+                                        "Mentoring",
+                                        "Coaching",
+                                        "Fast-tracking"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jakie umiejętności są kluczowe dla lidera w kontekście stylu przywództwa, według definicji IPMA ICB 4?",
+                                "correct_answer": "Umiejętność doboru i zastosowania odpowiednich stylów zarządzania w różnych sytuacjach",
+                                "questions": [
+                                        "Umiejętność doboru i zastosowania odpowiednich stylów zarządzania w różnych sytuacjach",
+                                        "Umiejętność programowania",
+                                        "Umiejętność budowania modeli finansowych",
+                                        "Umiejętność tworzenia planów marketingowych"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Przywództwo transakcyjne to takie, w którym jako sposób motywowania zespołu przyjmuje się, że:",
+                                "correct_answer": "Za wysiłek są nagrody, a za brak wymaganego wysiłku są kary.",
+                                "questions": [
+                                        "Za wysiłek są nagrody, a za brak wymaganego wysiłku są kary.",
+                                        "Do każdego pracownika trzeba indywidualnego podejścia, a to podejście to nic innego jak transakcja pomiędzy podwładnym a firmą.",
+                                        "Nie ma takiego przywództwa.",
+                                        "Kierownik projektu nakłania pracowników do wiążących deklaracji, obiecując im przy tym stabilność zatrudnienia."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co jest jednym z kluczowych zadań lidera według IPMA ICB 4?",
+                                "correct_answer": "Wytyczanie kierunku działań dla jednostek i grup",
+                                "questions": [
+                                        "Wytyczanie kierunku działań dla jednostek i grup",
+                                        "Tworzenie strategii marketingowej",
+                                        "Dostarczanie budżetu projektu",
+                                        "Prowadzenie analiz finansowych"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Dlaczego przywództwo jest szczególnie ważne w trakcie cyklu życia projektu?",
+                                "correct_answer": "Ze względu na konieczność zmian lub niepewność co do przebiegu projektu",
+                                "questions": [
+                                        "Ze względu na konieczność zmian lub niepewność co do przebiegu projektu",
+                                        "Ze względu na potrzebę regularnego raportowania finansowego",
+                                        "Ze względu na konieczność monitorowania dostępności zasobów",
+                                        "Ze względu na potrzebę tworzenia bardziej szczegółowych harmonogramów"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jakie aspekty obejmuje przyjęty styl przywództwa według IPMA ICB 4?",
+                                "correct_answer": "Wzorce zachowań, metody komunikacji i zarządzania konfliktami",
+                                "questions": [
+                                        "Wzorce zachowań, metody komunikacji i zarządzania konfliktami",
+                                        "Tworzenie kampanii reklamowych",
+                                        "Zarządzanie infrastrukturą IT",
+                                        "Analizy techniczne i inżynieryjne"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co osoba pełniąca rolę lidera powinna być w stanie zrobić według kompetencji Przywództwo?",
+                                "correct_answer": "Być postrzegana jako lider przed kierownictwem wyższego szczebla i innymi zainteresowanymi stronami",
+                                "questions": [
+                                        "Być postrzegana jako lider przed kierownictwem wyższego szczebla i innymi zainteresowanymi stronami",
+                                        "Przeprowadzać szczegółowe badania rynkowe",
+                                        "Planować logistykę projektu",
+                                        "Skutecznie zarządzać ryzykiem finansowym"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "W jaki sposób można budować ducha zespołu?",
+                                "correct_answer": "Przez motywację osobistą i wydarzenia społeczne",
+                                "questions": [
+                                        "Przez motywację osobistą i wydarzenia społeczne",
+                                        "Niewiązanie członków zespołu z projektami społecznymi",
+                                        "Unikając wydarzeń społecznych",
+                                        "Poprzez wyznaczanie tylko indywidualnych celów"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co może powodować problemy w zespole?",
+                                "correct_answer": "Różnice kulturowe, różne zainteresowania lub fizyczny dystans",
+                                "questions": [
+                                        "Różnice kulturowe, różne zainteresowania lub fizyczny dystans",
+                                        "Wyłącznie problemy finansowe",
+                                        "Brak wyłącznie odpowiedniego szkolenia",
+                                        "Jedynie trudności techniczne"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co jest celem pracy zespołowej wg standardu IPMA ICB 4?",
+                                "correct_answer": "Łączenie ludzi dla realizacji wspólnego celu",
+                                "questions": [
+                                        "Łączenie ludzi dla realizacji wspólnego celu",
+                                        "Wykonywanie zadań indywidualnie przez każdego członka zespołu",
+                                        "Zapewnienie, że projekt jest zakończony na czas",
+                                        "Minimalizowanie kosztów projektu"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co powinien robić kierownik projektu przez cały okres pracy zespołu?",
+                                "correct_answer": "Weryfikować pracę członków zespołu i reagować na potrzeby rozwojowe",
+                                "questions": [
+                                        "Weryfikować pracę członków zespołu i reagować na potrzeby rozwojowe",
+                                        "Delegować całą odpowiedzialność na specjalistów",
+                                        "Unikać kontaktu z zespołem",
+                                        "Skupiać się wyłącznie na zarządzaniu budżetem"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co określa wyrażenie „spoistość grupy”?",
+                                "correct_answer": "Występowanie silnych więzi łączących członków grupy.",
+                                "questions": [
+                                        "Występowanie silnych więzi łączących członków grupy.",
+                                        "Wspólne i jednogłośne zdanie na każdy temat.",
+                                        "Dopasowanie grupy pod kątem kompetencji jakie reprezentują poszczególni członkowie zespołu.",
+                                        "Jasne i spójne zasady wynagradzania za osiągnięte rezultaty."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jakie formy aktywności wspierają proces budowania zespołu?",
+                                "correct_answer": "Organizowanie spotkań, warsztatów i seminariów",
+                                "questions": [
+                                        "Organizowanie spotkań, warsztatów i seminariów",
+                                        "Zapewnienie wyłącznie sprzętu biurowego",
+                                        "Indywidualne sesje z trenerami fitness",
+                                        "Wsparcie techniczne i finansowe"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Zachowania wskazujące na podwyższony poziom stresu to:",
+                                "correct_answer": "częsty, przesadny sposób reagowania",
+                                "questions": [
+                                        "okazjonalne krytyczne wypowiedzi",
+                                        "chwilowy brak koncentracji uwagi",
+                                        "częsty, przesadny sposób reagowania",
+                                        "spokojny sposób wypowiedzi"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co obejmuje kompetencja Konflikt i kryzys według standardu IPMA ICB 4?",
+                                "correct_answer": "Moderowanie i rozwiązywanie konfliktów i kryzysów",
+                                "questions": [
+                                        "Zarządzanie budżetem projektu",
+                                        "Tworzenie harmonogramów",
+                                        "Moderowanie i rozwiązywanie konfliktów i kryzysów",
+                                        "Planowanie realizacji projektu"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jaki jest zamiar kompetencji Konflikt i kryzys?",
+                                "correct_answer": "Umożliwienie jednostce podjęcia efektywnych działań w przypadku kryzysu lub konfliktu",
+                                "questions": [
+                                        "Umożliwienie jednostce planowania zasobów ludzkich",
+                                        "Umożliwienie jednostce monitorowania postępu projektu",
+                                        "Umożliwienie jednostce efektywnego zarządzania kosztami",
+                                        "Umożliwienie jednostce podjęcia efektywnych działań w przypadku kryzysu lub konfliktu"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jak kryzys może wpłynąć na realizację celów projektu?",
+                                "correct_answer": "Kryzys może skutecznie zablokować realizację celów projektu",
+                                "questions": [
+                                        "Kryzys może skutecznie zablokować realizację celów projektu",
+                                        "Kryzys zawsze poprawia komunikację w zespole",
+                                        "Kryzys może być wykorzystywany do zmiany harmonogramu projektu",
+                                        "Kryzys może prowadzić do nowych możliwości rozwoju projektu"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Które z poniższych nie jest działaniem, jakie może podjąć jednostka w reakcji na konflikt lub kryzys?",
+                                "correct_answer": "Ignorowanie problemu",
+                                "questions": [
+                                        "Eskalacja",
+                                        "Ignorowanie problemu",
+                                        "Kompromis",
+                                        "Perswazja"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Czym czasami musi się zakończyć rozwiązanie konfliktu lub kryzysu w zespole projektowym?",
+                                "correct_answer": "Powołaniem niezależnych stron pośredniczących w mediacjach lub decyzyjnych",
+                                "questions": [
+                                        "Rozwiązaniem wewnątrz zespołu",
+                                        "Powołaniem niezależnych stron pośredniczących w mediacjach lub decyzyjnych",
+                                        "Zwiększeniem budżetu projektu",
+                                        "Przekierowaniem zasobów projektu"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Rozwiązując problem możesz wspomóc się następującym z działań",
+                                "correct_answer": "Stworzyć atmosferę otwartości i nieskrępowania dla wyrażania swoich poglądów",
+                                "questions": [
+                                        "Zorganizować spotkanie, podczas którego każdy z uczestników przedstawia swoje rozwiązanie a potem w tajnym głosowaniu, aby nikt nie został wyśmiany wybiera się najlepsze rozwiązanie.",
+                                        "Rozwiązując problem możesz wspomóc się następującym z działań",
+                                        "Stworzyć atmosferę otwartości i nieskrępowania dla wyrażania swoich poglądów",
+                                        "Szczegółowo opisać nowe rozwiązanie poprzez analizę słabych i mocnych stron"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co jest celem kompetencji przedsiębiorczości i kreatywności?",
+                                "correct_answer": "Umożliwienie jednostce skutecznego radzenia sobie z zagrożeniami, problemami, zmianami, ograniczeniami i stresującymi sytuacjami",
+                                "questions": [
+                                        "Maksymalizacja zysku projektu",
+                                        "Zwiększanie liczby członków zespołu projektowego",
+                                        "Umożliwienie jednostce skutecznego radzenia sobie z zagrożeniami, problemami, zmianami, ograniczeniami i stresującymi sytuacjami",
+                                        "Promowanie wyłącznie indywidualnej kreatywności"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Które z poniższych nie jest elementem przedsiębiorczości i kreatywności wg IPMA ICB 4?",
+                                "correct_answer": "Przestrzeganie wyłącznie istniejących procedur bez innowacji",
+                                "questions": [
+                                        "Stymulowanie kreatywności innych członków zespołu",
+                                        "Przestrzeganie wyłącznie istniejących procedur bez innowacji",
+                                        "Optymalne wykorzystanie dostępnych zasobów",
+                                        "Ulepszanie istniejących rozwiązań"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co jest warunkiem koniecznym dla akceptacji pomysłu lub idei w zespole projektowym?",
+                                "correct_answer": "Otwartość na kreatywność i innowacje w zespole",
+                                "questions": [
+                                        "Zatwierdzenie przez menedżera projektu, bez względu na zdanie zespołu",
+                                        "Przeprowadzenie formalnego głosowania",
+                                        "Wysokie koszty realizacji pomysłu",
+                                        "Otwartość na kreatywność i innowacje w zespole"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Dlaczego przedsiębiorczość i kreatywność są kluczowe dla sukcesu projektu?",
+                                "correct_answer": "Pomagają przezwyciężyć problemy i motywują zespół do współpracy w przekształcaniu pomysłu w realne rozwiązania",
+                                "questions": [
+                                        "Pomagają wyłącznie w planowaniu projektów",
+                                        "Pomagają w lepszym egzekwowaniu dyscypliny w zespole",
+                                        "Zastępują potrzebę zarządzania zasobami projektu",
+                                        "Pomagają przezwyciężyć problemy i motywują zespół do współpracy w przekształcaniu pomysłu w realne rozwiązania"
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Spośród wszystkich dostawców na rynku wyłącznie jeden ma przewagę jakościową i to z nim negocjujesz warunki kontraktu. Wybierasz strategię „win-win”, a to oznacza. że:",
+                                "correct_answer": "tworzysz odpowiedni korzystny klimat do rozmów i współpracujesz z drugą stroną dla osiągnięcia trwałego konsensusu.",
+                                "questions": [
+                                        "przygotowujesz się do negocjacji sporządzając listę argumentów kalkulując minimalny poziom zmniejszenia ceny.",
+                                        "tworzysz odpowiedni korzystny klimat do rozmów i współpracujesz z drugą stroną dla osiągnięcia trwałego konsensusu.",
+                                        "trzymasz się swoich warunków, podobnie jak druga strona i negocjujecie zgodnie z zasadą kompromisu.",
+                                        "negocjujesz, aby obie strony były zadowolone, czyli ustępstwo za ustępstwo."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co jest głównym celem procesu negocjacji?",
+                                "correct_answer": "Zrównoważenie różnych interesów, potrzeb i oczekiwań w celu osiągnięcia wspólnego porozumienia.",
+                                "questions": [
+                                        "Maksymalizacja zysków finansowych.",
+                                        "Zminimalizowanie liczby uczestników procesu.",
+                                        "Przejęcie kontroli nad projektem.",
+                                        "Zrównoważenie różnych interesów, potrzeb i oczekiwań w celu osiągnięcia wspólnego porozumienia."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Czego dotyczy zamiar elementu kompetencji negocjacyjnych?",
+                                "correct_answer": "Umożliwienia jednostce osiągnięcia zadowalających ustaleń z innymi za pomocą technik negocjacji.",
+                                "questions": [
+                                        "Umożliwienia jednostce kontrolowania wszystkich zasobów w projekcie.",
+                                        "Umożliwienia jednostce osiągnięcia zadowalających ustaleń z innymi za pomocą technik negocjacji.",
+                                        "Umożliwienia jednostce maksymalizacji korzyści finansowych.",
+                                        "Umożliwienia jednostce uniknięcia konfliktów za wszelką cenę."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Jakie czynniki mogą wpływać na proces negocjacyjny?",
+                                "correct_answer": "Odpowiednie wpływy stron i czynniki sytuacyjne.",
+                                "questions": [
+                                        "Tylko emocje i uczucia.",
+                                        "Odpowiednie wpływy stron i czynniki sytuacyjne.",
+                                        "Tylko fakty i liczby.",
+                                        "Żadne z powyższych."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Co umożliwia skuteczne negocjacje?",
+                                "correct_answer": "Zakładanie różnych opcji, z których każda ma potencjał, aby zaspokoić różne interesy, potrzeby i oczekiwania.",
+                                "questions": [
+                                        "Zakładanie różnych opcji, z których każda ma potencjał, aby zaspokoić różne interesy, potrzeby i oczekiwania.",
+                                        "Koncentrowanie się tylko na jednym rozwiązaniu.",
+                                        "Użycie wyłącznie formalnych procedur.",
+                                        "Ignorowanie emocji i uczuć stron."
+                                ],
+                                "category": "Ludzie"
+                        },
+                        {
+                                "question": "Które z poniższych stwierdzeń jest prawdziwe o procesie negocjacyjnym?",
+                                "correct_answer": "Negocjatorzy muszą czasem poczynić założenia na temat kwestii, do których nie mają pełnego dostępu.",
+                                "questions": [
+                                        "Negocjatorzy muszą czasem poczynić założenia na temat kwestii, do których nie mają pełnego dostępu.",
+                                        "Negocjatorzy zawsze mają dostęp do pełnej informacji.",
+                                        "Negocjacje zawsze eliminują emocje i uczucia.",
+                                        "Negocjacje są zawsze procesami formalnymi."
+                                ],
+                                "category": "Ludzie"
+                        }
+                ];
+
+                // --- ZMIENNE STANU ---
+                let filteredQuestions = [];
+                let shuffledQuestions = [];
+                let currentQuestionIndex = 0;
+                let userAnswers = [];
+                let shuffledAnswers = [];
+                let score = 0;
+
+                // --- ELEMENTY DOM ---
+                const setupPanel = document.getElementById('setup-panel');
+                const categorySelect = document.getElementById('category-select');
+                const rangeFromInput = document.getElementById('range-from');
+                const rangeToInput = document.getElementById('range-to');
+                const startBtn = document.getElementById('start-btn');
+                const quizContainer = document.getElementById('quiz-container');
+                const questionEl = document.getElementById('question');
+                const answersEl = document.getElementById('answers');
+                const nextBtn = document.getElementById('next-btn');
+                const scoreEl = document.getElementById('score');
+                const summaryEl = document.getElementById('summary');
+
+                // --- FUNKCJE POMOCNICZE ---
+                function shuffleArray(array) {
+                        for (let i = array.length - 1; i > 0; i--) {
+                                const j = Math.floor(Math.random() * (i + 1));
+                                [array[i], array[j]] = [array[j], array[i]];
+                        }
+                }
+
+                function getCategories() {
+                        const set = new Set();
+                        quizData.forEach(q => set.add(q.category));
+                        return Array.from(set);
+                }
+
+                function updateRangeInputs() {
+                        const selectedCategory = categorySelect.value;
+                        const questionsInCategory = quizData.filter(q => q.category === selectedCategory);
+                        const max = questionsInCategory.length;
+                        rangeFromInput.max = max;
+                        rangeToInput.max = max;
+                        if (parseInt(rangeFromInput.value) > max) rangeFromInput.value = 1;
+                        if (parseInt(rangeToInput.value) > max) rangeToInput.value = max;
+                        if (parseInt(rangeFromInput.value) < 1) rangeFromInput.value = 1;
+                        if (parseInt(rangeToInput.value) < 1) rangeToInput.value = 1;
+                }
+
+                // --- INICJALIZACJA PANELU WYBORU ---
+                function initSetupPanel() {
+                        // Kategorie
+                        const categories = getCategories();
+                        categorySelect.innerHTML = '';
+                        categories.forEach(cat => {
+                                const opt = document.createElement('option');
+                                opt.value = cat;
+                                opt.textContent = cat;
+                                categorySelect.appendChild(opt);
+                        });
+                        updateRangeInputs();
+                }
+
+                categorySelect.addEventListener('change', () => {
+                        updateRangeInputs();
+                        // Po zmianie kategorii resetujemy zakres do pełnego zakresu
+                        rangeFromInput.value = 1;
+                        rangeToInput.value = rangeToInput.max;
+                });
+
+                // WALIDACJA: "pytania od" nie mogą być większe niż "pytania do"
+                rangeFromInput.addEventListener('input', () => {
+                        let fromVal = parseInt(rangeFromInput.value);
+                        let toVal = parseInt(rangeToInput.value);
+                        if (isNaN(fromVal) || fromVal < 1) fromVal = 1;
+                        if (isNaN(toVal) || toVal < 1) toVal = 1;
+
+                        if (fromVal > toVal) {
+                                fromVal = toVal; // "od" nie może być większe niż "do"
+                        }
+                        if (fromVal > rangeFromInput.max) fromVal = parseInt(rangeFromInput.max);
+
+                        rangeFromInput.value = fromVal;
+                        rangeToInput.value = toVal;
+                });
+
+                // WALIDACJA: "pytania do" nie mogą być mniejsze niż "pytania od"
+                rangeToInput.addEventListener('input', () => {
+                        let fromVal = parseInt(rangeFromInput.value);
+                        let toVal = parseInt(rangeToInput.value);
+                        if (isNaN(fromVal) || fromVal < 1) fromVal = 1;
+                        if (isNaN(toVal) || toVal < 1) toVal = 1;
+
+                        if (toVal < fromVal) {
+                                toVal = fromVal; // "do" nie może być mniejsze niż "od"
+                        }
+                        if (toVal > rangeToInput.max) toVal = parseInt(rangeToInput.max);
+
+                        rangeFromInput.value = fromVal;
+                        rangeToInput.value = toVal;
+                });
+
+                // --- ROZPOCZĘCIE QUIZU ---
+                startBtn.onclick = () => {
+                        const category = categorySelect.value;
+                        let from = parseInt(rangeFromInput.value);
+                        let to = parseInt(rangeToInput.value);
+                        if (from < 1) from = 1;
+                        if (to < 1) to = 1;
+                        if (from > to) [from, to] = [to, from];
+
+                        // Filtrowanie pytań po kategorii
+                        filteredQuestions = quizData.filter(q => q.category === category);
+                        if (filteredQuestions.length === 0) {
+                                alert("Brak pytań w tej kategorii.");
+                                return;
+                        }
+                        // Zakres
+                        if (from > filteredQuestions.length) from = 1;
+                        if (to > filteredQuestions.length) to = filteredQuestions.length;
+
+                        // Wybrane pytania z zakresu (1-based)
+                        let questionsRange = filteredQuestions.slice(from - 1, to);
+                        // Losowanie kolejności
+                        shuffledQuestions = questionsRange.slice();
+                        shuffleArray(shuffledQuestions);
+
+                        // Losowanie odpowiedzi do każdego pytania
+                        shuffledAnswers = [];
+                        for (let q of shuffledQuestions) {
+                                let ans = q.questions.slice();
+                                shuffleArray(ans);
+                                shuffledAnswers.push(ans);
+                        }
+                        currentQuestionIndex = 0;
+                        userAnswers = new Array(shuffledQuestions.length).fill(null);
+                        score = 0;
+
+                        // Ukryj panel wyboru, pokaż quiz
+                        setupPanel.style.display = 'none';
+                        quizContainer.style.display = 'block';
+                        scoreEl.style.display = 'none';
+                        summaryEl.style.display = 'none';
+                        questionEl.style.display = 'block';
+                        answersEl.style.display = 'block';
+                        nextBtn.style.display = 'inline';
+                        nextBtn.disabled = true;
+                        nextBtn.textContent = "Następne pytanie";
+                        loadQuestion();
+                };
+
+                // --- WYSWIETLANIE PYTANIA ---
+                function loadQuestion() {
+                        const currentQuestion = shuffledQuestions[currentQuestionIndex];
+                        questionEl.textContent = `Pytanie ${currentQuestionIndex + 1} z ${shuffledQuestions.length}: ${currentQuestion.question}`;
+                        answersEl.innerHTML = '';
+
+                        shuffledAnswers[currentQuestionIndex].forEach((answer, idx) => {
+                                const li = document.createElement('li');
+                                const label = document.createElement('label');
+                                label.setAttribute('for', 'answer-' + idx);
+                                const input = document.createElement('input');
+                                input.type = 'radio';
+                                input.name = 'answer';
+                                input.value = answer;
+                                input.id = 'answer-' + idx;
+                                input.tabIndex = idx + 1;
+
+                                // Restore previous selection if exists
+                                if (userAnswers[currentQuestionIndex] === answer) {
+                                        input.checked = true;
+                                        li.classList.add('selected');
+                                        nextBtn.disabled = false;
+                                }
+
+                                input.addEventListener('change', () => {
+                                        userAnswers[currentQuestionIndex] = answer;
+                                        // Highlight selected
+                                        Array.from(answersEl.children).forEach(li => li.classList.remove('selected'));
+                                        li.classList.add('selected');
+                                        nextBtn.disabled = false;
+                                });
+
+                                label.appendChild(input);
+                                label.appendChild(document.createTextNode(answer));
+                                li.appendChild(label);
+                                answersEl.appendChild(li);
+                        });
+
+                        // If no answer selected, disable next
+                        if (!userAnswers[currentQuestionIndex]) {
+                                nextBtn.disabled = true;
+                        }
+                }
+
+                nextBtn.onclick = () => {
+                        if (!userAnswers[currentQuestionIndex]) return;
+                        currentQuestionIndex++;
+                        if (currentQuestionIndex < shuffledQuestions.length) {
+                                loadQuestion();
+                                nextBtn.disabled = !userAnswers[currentQuestionIndex];
+                                if (currentQuestionIndex === shuffledQuestions.length - 1) {
+                                        nextBtn.textContent = "Zakończ quiz";
+                                } else {
+                                        nextBtn.textContent = "Następne pytanie";
+                                }
+                        } else {
+                                showSummary();
+                        }
+                };
+
+                function showSummary() {
+                        // Calculate score
+                        score = 0;
+                        for (let i = 0; i < shuffledQuestions.length; i++) {
+                                if (userAnswers[i] === shuffledQuestions[i].correct_answer) {
+                                        score++;
+                                }
+                        }
+                        questionEl.style.display = 'none';
+                        answersEl.style.display = 'none';
+                        nextBtn.style.display = 'none';
+                        scoreEl.style.display = 'block';
+                        summaryEl.style.display = 'block';
+                        scoreEl.innerHTML = `Twój wynik: ${score} z ${shuffledQuestions.length}`;
+
+                        let summaryHtml = `<table class="summary-table">
+                <tr>
+                    <th>Pytanie</th>
+                    <th>Twoja odpowiedź</th>
+                    <th>Poprawna odpowiedź</th>
+                </tr>`;
+                        for (let i = 0; i < shuffledQuestions.length; i++) {
+                                const q = shuffledQuestions[i];
+                                const userA = userAnswers[i];
+                                const correctA = q.correct_answer;
+                                let userClass = '';
+                                if (userA === correctA) {
+                                        userClass = 'user-correct';
+                                } else {
+                                        userClass = 'user-wrong';
+                                }
+                                summaryHtml += `<tr>
+                    <td>${q.question}</td>
+                    <td class="${userClass}">${userA ? userA : '<em>Brak odpowiedzi</em>'}</td>
+                    <td class="${userA !== correctA ? 'correct-answer' : ''}">${userA !== correctA ? correctA : ''}</td>
+                </tr>`;
+                        }
+                        summaryHtml += `</table>`;
+                        const restartBtn = `<button onclick="restartQuiz()">Powrót do wyboru zakresu</button>`;
+                        summaryEl.innerHTML = summaryHtml + restartBtn;
+                }
+
+                // Restart quiz: powrót do wyboru kategorii i zakresu
+                window.restartQuiz = function () {
+                        setupPanel.style.display = 'block';
+                        quizContainer.style.display = 'none';
+                };
+
+                // --- INICJALIZACJA ---
+                initSetupPanel();
+        </script>
+</body>
+
+</html>
